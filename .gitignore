@@ -274,4 +274,5 @@ vestigo/media/
 .pytest_cache/
 .ipython/
 .env
+.envrc.local
 .envs/*

@@ -25,9 +25,9 @@ For convenience, you can keep your normal user logged in on Chrome and your supe
 
 ### Type checks
 
-Running type checks with mypy:
+Running type checks with ty:
 
-    uv run mypy vestigo
+    uv run ty check
 
 ### Test coverage
 

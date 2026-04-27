@@ -17,7 +17,7 @@ dependencies = [
   "celery==5.6.3",
   "collectfasta==3.3.3",
   "crispy-bootstrap5==2026.3",
-  "django==6.0.4",
+  "django>=5.2,<5.3",
   "django-allauth[mfa]==65.16.1",
   "django-anymail[amazon-ses]==15.0",
   "django-celery-beat==2.9.0",
@@ -57,11 +57,9 @@ dev = [
   "django-coverage-plugin==3.2.2",
   "django-debug-toolbar==6.3.0",
   "django-extensions==4.1",
-  "django-stubs[compatible-mypy]==6.0.3",
   "djlint==1.36.4",
   "factory-boy==3.3.3",
   "ipdb==0.13.13",
-  "mypy==1.20.2",
   "pre-commit==4.6.0",
   "psycopg[c]==3.3.3",
   "pytest==9.0.3",
@@ -70,6 +68,7 @@ dev = [
   "ruff==0.15.12",
   "sphinx==9.1.0",
   "sphinx-autobuild==2025.8.25",
+  "ty>=0.0.32",
   "watchfiles==1.1.1",
   "werkzeug[watchdog]==3.1.8",
 ]
@@ -141,6 +140,17 @@ lint.ignore = [
 ]
 lint.isort.force-single-line = true
 
+[tool.ty.src]
+exclude = [
+  "**/migrations/**",
+  "**/tests/**",
+  "config/settings/**",
+]
+
+[tool.ty.rules]
+invalid-return-type = "ignore"
+unresolved-attribute = "ignore"
+
 [tool.pyproject-fmt]
 keep_full_version = true
 
@@ -160,27 +170,6 @@ python_files = [
 include = [ "vestigo/**" ]
 omit = [ "*/migrations/*", "*/tests/*" ]
 plugins = [ "django_coverage_plugin" ]
-
-# ==== mypy ====
-
-[tool.mypy]
-python_version = "3.14"
-check_untyped_defs = true
-ignore_missing_imports = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-plugins = [
-  "mypy_django_plugin.main",
-]
-
-[[tool.mypy.overrides]]
-# Django migrations should not produce any errors:
-module = "*.migrations.*"
-ignore_errors = true
-
-[tool.django-stubs]
-django_settings_module = "config.settings.test"
 
 # ==== djLint ====
 
