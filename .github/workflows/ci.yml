@@ -41,6 +41,24 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v6
 
+      - name: Create Docker env files
+        run: |
+          mkdir -p .envs/.local
+          cat > .envs/.local/.django <<'EOF'
+          USE_DOCKER=yes
+          IPYTHONDIR=/app/.ipython
+          REDIS_URL=redis://redis:6379/0
+          CELERY_FLOWER_USER=ci
+          CELERY_FLOWER_PASSWORD=ci
+          EOF
+          cat > .envs/.local/.postgres <<'EOF'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          POSTGRES_DB=vestigo
+          POSTGRES_USER=vestigo
+          POSTGRES_PASSWORD=vestigo
+          EOF
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
