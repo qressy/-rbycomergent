@@ -7,8 +7,6 @@ from django.urls import path
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
 
-from .api import api
-
 urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path(
@@ -31,14 +29,15 @@ if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
 
 
-# API URLS
-urlpatterns += [
-    # API base url
-    path("api/", api.urls),
-]
-
 for urlconf in settings.VESTIGO_URLCONFS:
     urlpatterns.append(path("", include(urlconf)))
+
+if settings.VESTIGO_ENABLE_API:
+    from .api import api
+
+    urlpatterns += [
+        path("api/", api.urls),
+    ]
 
 if settings.DEBUG:
     # This allows the error pages to be debugged during development, just visit

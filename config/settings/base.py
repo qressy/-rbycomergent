@@ -94,10 +94,11 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # Vestigo extension points
 # ------------------------------------------------------------------------------
+VESTIGO_URLCONFS = []
+VESTIGO_ENABLE_API = env.bool("VESTIGO_ENABLE_API", default=False)
 VESTIGO_API_ROUTERS = [
     ("/users/", "vestigo.users.api.views.router"),
 ]
-VESTIGO_URLCONFS = []
 
 # MIGRATIONS
 # ------------------------------------------------------------------------------
