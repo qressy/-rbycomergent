@@ -28,7 +28,7 @@ django.setup()
 
 # -- Project information -----------------------------------------------------
 
-project = "vestigo"
+project = "chattersift"
 copyright = """2026, Walden Cui"""  # noqa: A001
 author = "Walden Cui"
 

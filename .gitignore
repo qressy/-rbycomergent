@@ -269,7 +269,7 @@ tags
 dump.rdb
 
 ### Project template
-vestigo/media/
+chattersift/media/
 
 .pytest_cache/
 .ipython/

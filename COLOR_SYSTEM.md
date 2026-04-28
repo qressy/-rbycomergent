@@ -1,9 +1,9 @@
-# Vestigo Color System
+# Chattersift Color System
 
-This document defines the Vestigo color system.
+This document defines the Chattersift color system.
 
-- The Django Tailwind and DaisyUI theme source lives in `vestigo/static/src/project.css`.
-- The compiled stylesheet served by Django lives in `vestigo/static/css/project.css`.
+- The Django Tailwind and DaisyUI theme source lives in `chattersift/static/src/project.css`.
+- The compiled stylesheet served by Django lives in `chattersift/static/css/project.css`.
 
 ## Prefixes By Surface
 

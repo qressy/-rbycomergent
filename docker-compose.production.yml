@@ -2,9 +2,9 @@ volumes:
   production_postgres_data: {}
   production_postgres_data_backups: {}
   production_traefik: {}
-  
+
   production_redis_data: {}
-  
+
 
 
 services:
@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
 
-    image: vestigo_production_django
+    image: chattersift_production_django
     depends_on:
       - postgres
       - redis
@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
-    image: vestigo_production_postgres
+    image: chattersift_production_postgres
     volumes:
       - production_postgres_data:/var/lib/postgresql/data
       - production_postgres_data_backups:/backups
@@ -37,7 +37,7 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/traefik/Dockerfile
-    image: vestigo_production_traefik
+    image: chattersift_production_traefik
     depends_on:
       - django
     volumes:
@@ -49,24 +49,24 @@ services:
 
   redis:
     image: docker.io/redis:7.2
-    
+
     volumes:
       - production_redis_data:/data
-    
+
 
   celeryworker:
     <<: *django
-    image: vestigo_production_celeryworker
+    image: chattersift_production_celeryworker
     command: /start-celeryworker
 
   celerybeat:
     <<: *django
-    image: vestigo_production_celerybeat
+    image: chattersift_production_celerybeat
     command: /start-celerybeat
 
   flower:
     <<: *django
-    image: vestigo_production_flower
+    image: chattersift_production_flower
     command: /start-flower
 
   awscli:

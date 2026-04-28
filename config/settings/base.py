@@ -8,8 +8,8 @@ from typing import Any
 import environ
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
-# vestigo/
-APPS_DIR = BASE_DIR / "vestigo"
+# chattersift/
+APPS_DIR = BASE_DIR / "chattersift"
 env = environ.Env()
 
 READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
@@ -50,7 +50,6 @@ LOCALE_PATHS = [str(BASE_DIR / "locale")]
 DATABASES = {"default": env.db("DATABASE_URL")}
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # URLS
 # ------------------------------------------------------------------------------
@@ -84,27 +83,27 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "vestigo.users",
-    "vestigo.core",
-    "vestigo.tracking",
-    "vestigo.reddit",
-    "vestigo.alerts",
+    "chattersift.users",
+    "chattersift.core",
+    "chattersift.tracking",
+    "chattersift.reddit",
+    "chattersift.alerts",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
-# Vestigo extension points
+# Chattersift extension points
 # ------------------------------------------------------------------------------
-VESTIGO_URLCONFS = []
-VESTIGO_ENABLE_API = env.bool("VESTIGO_ENABLE_API", default=False)
-VESTIGO_API_ROUTERS = [
-    ("/users/", "vestigo.users.api.views.router"),
+CHATTERSIFT_URLCONFS = []
+CHATTERSIFT_ENABLE_API = env.bool("CHATTERSIFT_ENABLE_API", default=False)
+CHATTERSIFT_API_ROUTERS = [
+    ("/users/", "chattersift.users.api.views.router"),
 ]
 
 # MIGRATIONS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#migration-modules
-MIGRATION_MODULES = {"sites": "vestigo.contrib.sites.migrations"}
+MIGRATION_MODULES = {"sites": "chattersift.contrib.sites.migrations"}
 
 # AUTHENTICATION
 # ------------------------------------------------------------------------------
@@ -199,7 +198,7 @@ TEMPLATES: list[dict[str, Any]] = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
-                "vestigo.users.context_processors.allauth_settings",
+                "chattersift.users.context_processors.allauth_settings",
             ],
         },
     },
@@ -241,7 +240,7 @@ EMAIL_TIMEOUT = 5
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = ['"Walden Cui" <contact@vestigohq.com>']
+ADMINS = ['"Walden Cui" <contact@chattersift.com>']
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings
@@ -326,13 +325,13 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_ADAPTER = "vestigo.users.adapters.AccountAdapter"
+ACCOUNT_ADAPTER = "chattersift.users.adapters.AccountAdapter"
 # https://docs.allauth.org/en/latest/account/forms.html
-ACCOUNT_FORMS = {"signup": "vestigo.users.forms.UserSignupForm"}
+ACCOUNT_FORMS = {"signup": "chattersift.users.forms.UserSignupForm"}
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
-SOCIALACCOUNT_ADAPTER = "vestigo.users.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "chattersift.users.adapters.SocialAccountAdapter"
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
-SOCIALACCOUNT_FORMS = {"signup": "vestigo.users.forms.UserSocialSignupForm"}
+SOCIALACCOUNT_FORMS = {"signup": "chattersift.users.forms.UserSocialSignupForm"}
 # django-compressor
 # ------------------------------------------------------------------------------
 # https://django-compressor.readthedocs.io/en/latest/quickstart/#installation

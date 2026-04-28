@@ -54,9 +54,9 @@ jobs:
           cat > .envs/.local/.postgres <<'EOF'
           POSTGRES_HOST=postgres
           POSTGRES_PORT=5432
-          POSTGRES_DB=vestigo
-          POSTGRES_USER=vestigo
-          POSTGRES_PASSWORD=vestigo
+          POSTGRES_DB=chattersift
+          POSTGRES_USER=chattersift
+          POSTGRES_PASSWORD=chattersift
           EOF
 
       - name: Set up Docker Buildx

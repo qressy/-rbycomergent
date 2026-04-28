@@ -1,11 +1,15 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [ "hatchling" ]
+
 [project]
-name = "vestigo"
+name = "chattersift"
 version = "0.1.0"
 description = "Keywords monitoring for Reddit."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
-  { name = "Walden Cui", email = "contact@vestigohq.com" },
+  { name = "Walden Cui", email = "contact@chattersift.com" },
 ]
 requires-python = "==3.14.*"
 classifiers = [
@@ -37,18 +41,8 @@ dependencies = [
   "python-slugify==8.0.4",
   "redis==7.4.0",
   "sentry-sdk==2.58.0",
-  "uvicorn-worker==0.4.0",
   "uvicorn[standard]==0.46.0",
-]
-
-[build-system]
-requires = [ "hatchling" ]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = [
-  "config",
-  "vestigo",
+  "uvicorn-worker==0.4.0",
 ]
 
 [dependency-groups]
@@ -73,13 +67,18 @@ dev = [
   "werkzeug[watchdog]==3.1.8",
 ]
 
+[tool.hatch]
+build.targets.wheel.packages = [
+  "config",
+  "chattersift",
+]
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 extend-exclude = [
   "*/migrations/*.py",
   "staticfiles/*",
 ]
-
 lint.select = [
   "A",
   "ASYNC",
@@ -140,39 +139,34 @@ lint.ignore = [
 ]
 lint.isort.force-single-line = true
 
-[tool.ty.src]
-exclude = [
+[tool.pyproject-fmt]
+keep_full_version = true
+
+[tool.ty]
+rules.invalid-return-type = "ignore"
+rules.unresolved-attribute = "ignore"
+src.exclude = [
   "**/migrations/**",
   "**/tests/**",
   "config/settings/**",
 ]
 
-[tool.ty.rules]
-invalid-return-type = "ignore"
-unresolved-attribute = "ignore"
-
-[tool.pyproject-fmt]
-keep_full_version = true
-
+[tool.pytest]
 # ==== pytest ====
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
-python_files = [
+ini_options.minversion = "6.0"
+ini_options.addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
+ini_options.python_files = [
   "tests.py",
   "test_*.py",
 ]
 
+[tool.coverage]
 # ==== Coverage ====
-
-[tool.coverage.run]
-include = [ "vestigo/**" ]
-omit = [ "*/migrations/*", "*/tests/*" ]
-plugins = [ "django_coverage_plugin" ]
+run.include = [ "chattersift/**" ]
+run.omit = [ "*/migrations/*", "*/tests/*" ]
+run.plugins = [ "django_coverage_plugin" ]
 
 # ==== djLint ====
-
 [tool.djlint]
 blank_line_after_tag = "load,extends"
 close_void_tags = true
@@ -184,9 +178,5 @@ include = "H017,H035"
 indent = 2
 max_line_length = 119
 profile = "django"
-
-[tool.djlint.css]
-indent_size = 2
-
-[tool.djlint.js]
-indent_size = 2
+css.indent_size = 2
+js.indent_size = 2

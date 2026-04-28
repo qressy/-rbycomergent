@@ -1,6 +1,6 @@
-# Translations for the vestigo project
+# Translations for the chattersift project
 # Copyright (C) 2026 Walden Cui
-# Walden Cui <contact@vestigohq.com>, 2026.
+# Walden Cui <contact@chattersift.com>, 2026.
 #
 #, fuzzy
 msgid ""

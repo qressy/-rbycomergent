@@ -1,4 +1,4 @@
-# vestigo
+# chattersift
 
 Keywords monitoring for Reddit.
 
@@ -55,7 +55,7 @@ Watch and rebuild during frontend work:
 
     npm run watch:css
 
-The Tailwind and DaisyUI source stylesheet is `vestigo/static/src/project.css`. The compiled output is `vestigo/static/css/project.css`, which is already linked from the base template.
+The Tailwind and DaisyUI source stylesheet is `chattersift/static/src/project.css`. The compiled output is `chattersift/static/css/project.css`, which is already linked from the base template.
 
 ### Live reloading
 
@@ -68,7 +68,7 @@ This app comes with Celery.
 To run a celery worker:
 
 ```bash
-cd vestigo
+cd chattersift
 uv run celery -A config.celery_app worker -l info
 ```
 
@@ -77,14 +77,14 @@ Please note: For Celery's import magic to work, it is important _where_ the cele
 To run [periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html), you'll need to start the celery beat scheduler service. You can start it as a standalone process:
 
 ```bash
-cd vestigo
+cd chattersift
 uv run celery -A config.celery_app beat
 ```
 
 or you can embed the beat service inside a worker with the `-B` option (not recommended for production use):
 
 ```bash
-cd vestigo
+cd chattersift
 uv run celery -A config.celery_app worker -B -l info
 ```
 

@@ -10,7 +10,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=_source
 set BUILDDIR=_build
-set APP=..\vestigo
+set APP=..\chattersift
 
 if "%1" == "" goto help
 

@@ -20,9 +20,9 @@ def main():
         ) from exc
 
     # This allows easy placement of apps within the interior
-    # vestigo directory.
+    # chattersift directory.
     current_path = Path(__file__).parent.resolve()
-    sys.path.append(str(current_path / "vestigo"))
+    sys.path.append(str(current_path / "chattersift"))
 
     execute_from_command_line(sys.argv)
 

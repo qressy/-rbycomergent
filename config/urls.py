@@ -17,7 +17,7 @@ urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
     # User management
-    path("users/", include("vestigo.users.urls", namespace="users")),
+    path("users/", include("chattersift.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
     # ...
@@ -29,10 +29,10 @@ if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
 
 
-for urlconf in settings.VESTIGO_URLCONFS:
+for urlconf in settings.CHATTERSIFT_URLCONFS:
     urlpatterns.append(path("", include(urlconf)))
 
-if settings.VESTIGO_ENABLE_API:
+if settings.CHATTERSIFT_ENABLE_API:
     from .api import api
 
     urlpatterns += [

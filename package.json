@@ -1,9 +1,9 @@
 {
-  "name": "vestigo",
+  "name": "chattersift",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss -i ./vestigo/static/src/project.css -o ./vestigo/static/css/project.css",
-    "watch:css": "tailwindcss -i ./vestigo/static/src/project.css -o ./vestigo/static/css/project.css --watch"
+    "build:css": "tailwindcss -i ./chattersift/static/src/project.css -o ./chattersift/static/css/project.css",
+    "watch:css": "tailwindcss -i ./chattersift/static/src/project.css -o ./chattersift/static/css/project.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.2.4",

@@ -1,6 +1,6 @@
 // For format details, see https://containers.dev/implementors/json_reference/
 {
-    "name": "vestigo_dev",
+    "name": "chattersift_dev",
     "dockerComposeFile": [
         "../docker-compose.local.yml"
     ],
