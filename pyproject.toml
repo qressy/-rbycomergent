@@ -33,7 +33,6 @@ dependencies = [
   "django-ninja==1.6.2",
   "django-redis==6.0.0",
   "django-storages[s3]==1.14.6",
-  "flower==2.0.1",
   "gunicorn==25.3.0",
   "hiredis==3.3.1",
   "pillow==12.2.0",

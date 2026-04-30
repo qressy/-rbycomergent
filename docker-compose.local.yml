@@ -69,11 +69,3 @@ services:
       - mailpit
     ports: []
     command: /start-celerybeat
-
-  flower:
-    <<: *django
-    image: chattersift_local_flower
-    container_name: chattersift_local_flower
-    ports:
-      - '5555:5555'
-    command: /start-flower
