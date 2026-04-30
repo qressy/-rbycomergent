@@ -95,6 +95,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # Chattersift extension points
 # ------------------------------------------------------------------------------
 CHATTERSIFT_URLCONFS = []
+CHATTERSIFT_HOME_TEMPLATE: str = "pages/home.html"
 CHATTERSIFT_ENABLE_API = env.bool("CHATTERSIFT_ENABLE_API", default=False)
 CHATTERSIFT_API_ROUTERS = [
     ("/users/", "chattersift.users.api.views.router"),
