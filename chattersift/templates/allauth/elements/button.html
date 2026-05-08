@@ -2,12 +2,13 @@
 
 {% comment %} djlint:off {% endcomment %}
 <{% if attrs.href %}a href="{{ attrs.href }}"{% else %}button{% endif %}
-                      {% if attrs.form %}form="{{ attrs.form }}"{% endif %}
-                      {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
-                      {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
-                      {% if attrs.type %}type="{{ attrs.type }}"{% endif %}
-                      class="btn
-{% if 'success' in attrs.tags %}btn-success
+  {% if attrs.form %}form="{{ attrs.form }}"{% endif %}
+  {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+  {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+  {% if attrs.type %}type="{{ attrs.type }}"{% endif %}
+  class="btn w-full
+{% if 'outline' in attrs.tags %}btn-outline btn-primary
+{% elif 'success' in attrs.tags %}btn-success
 {% elif 'warning' in attrs.tags %}btn-warning
 {% elif 'secondary' in attrs.tags %}btn-secondary
 {% elif 'danger' in attrs.tags %}btn-error
@@ -17,4 +18,4 @@
 >
   {% slot %}
   {% endslot %}
-  </{% if attrs.href %}a{% else %}button{% endif %}>
+</{% if attrs.href %}a{% else %}button{% endif %}>

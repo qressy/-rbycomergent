@@ -1,3 +1,26 @@
-{% load crispy_forms_tags %}
-
-{{ attrs.form|crispy }}
+{% for field in attrs.form %}
+  {% if field.errors %}
+    {% for error in field.errors %}<div class="text-error text-sm mb-2">{{ error }}</div>{% endfor %}
+  {% endif %}
+  {% if field.is_hidden %}
+    {{ field }}
+  {% else %}
+    <div class="mb-5">
+      {% if field.field.widget.input_type == "checkbox" %}
+        <label class="flex items-center gap-3 cursor-pointer"
+               for="{{ field.id_for_label }}">
+          {{ field }}
+          <span class="text-sm text-base-content">{{ field.label }}</span>
+        </label>
+      {% else %}
+        <label class="block text-sm font-medium text-base-content mb-1.5"
+               for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      {% endif %}
+      {% if field.help_text %}<div class="text-xs text-base-content/50 mt-1.5">{{ field.help_text }}</div>{% endif %}
+    </div>
+  {% endif %}
+{% endfor %}
+{% if attrs.form.non_field_errors %}
+  {% for error in attrs.form.non_field_errors %}<div class="text-error text-sm mb-4">{{ error }}</div>{% endfor %}
+{% endif %}
