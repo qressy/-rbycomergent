@@ -21,9 +21,7 @@ from chattersift.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
 
-FIXTURE_ROOT = (
-    Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "reddit" / "raw"
-)
+FIXTURE_ROOT = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "reddit" / "raw"
 EXPECTED_RAW_FIXTURE_NAMES = {
     "comment_search_multi_subreddit_django_python_htmx.json",
     "comment_search_sitewide_django.json",
@@ -50,12 +48,20 @@ EXPECTED_RAW_FIXTURE_NAMES = {
     "single_subreddit_python_new.atom",
     "single_subreddit_python_new.json",
 }
-RAW_RESPONSE_FIXTURES = sorted(
-    path for path in FIXTURE_ROOT.iterdir() if path.suffix in {".atom", ".json"}
-)
+RAW_RESPONSE_FIXTURES = sorted(path for path in FIXTURE_ROOT.iterdir() if path.suffix in {".atom", ".json"})
 PAIRED_JSON_RESPONSE_FIXTURES = sorted(
     path for path in FIXTURE_ROOT.glob("*.json") if path.with_suffix(".atom").exists()
 )
+PAIRED_POST_JSON_RESPONSE_FIXTURES = [
+    path
+    for path in PAIRED_JSON_RESPONSE_FIXTURES
+    if "new" in path.name or path.name.startswith(("keyword_", "keywords_", "post_comment_tree_"))
+]
+PAIRED_COMMENT_JSON_RESPONSE_FIXTURES = [
+    path
+    for path in PAIRED_JSON_RESPONSE_FIXTURES
+    if "comments" in path.name or path.name.startswith("post_comment_tree_")
+]
 EXPECTED_JSON_ONLY_IDS_BY_FIXTURE = {
     "keyword_sitewide_htmx.json": {"t3_1t2fsop"},
     "keywords_sitewide_django_htmx_postgres.json": {"t3_1t4vhs9"},
@@ -200,6 +206,51 @@ def test_json_and_atom_fixture_ingestion_produce_same_core_items(
         assert json_snapshot[reddit_id] == atom_snapshot[reddit_id]
 
 
+@pytest.mark.parametrize(
+    ("item_type", "json_fixture_paths"),
+    [
+        (RedditItem.RedditItemType.POST, PAIRED_POST_JSON_RESPONSE_FIXTURES),
+        (RedditItem.RedditItemType.COMMENT, PAIRED_COMMENT_JSON_RESPONSE_FIXTURES),
+    ],
+    ids=["posts", "comments"],
+)
+def test_json_and_atom_fixture_ingestion_upserts_same_item_fields_by_type(
+    item_type: str,
+    json_fixture_paths: list[Path],
+) -> None:
+    """Verify JSON and Atom fixtures upsert identical post and comment rows."""
+    assert json_fixture_paths
+    for json_fixture_path in json_fixture_paths:
+        atom_fixture_path = json_fixture_path.with_suffix(".atom")
+
+        json_snapshot = ingest_fixture_and_snapshot_full_items(
+            json_fixture_path,
+            item_type=item_type,
+        )
+        reset_reddit_ingestion_tables()
+        atom_snapshot = ingest_fixture_and_snapshot_full_items(
+            atom_fixture_path,
+            item_type=item_type,
+        )
+
+        json_ids = set(json_snapshot)
+        atom_ids = set(atom_snapshot)
+        expected_json_only_ids = (
+            EXPECTED_JSON_ONLY_IDS_BY_FIXTURE.get(
+                json_fixture_path.name,
+                set(),
+            )
+            & json_ids
+        )
+        common_ids = json_ids & atom_ids
+
+        assert json_ids - atom_ids == expected_json_only_ids
+        assert atom_ids - json_ids == set()
+        assert common_ids, f"{json_fixture_path.name} must include {item_type} rows"
+        for reddit_id in common_ids:
+            assert json_snapshot[reddit_id] == atom_snapshot[reddit_id]
+
+
 def test_comment_tree_source_permalink_fixture_matches_tree_payloads() -> None:
     """Use the source permalink fixture to verify both comment-tree responses."""
     source_permalink = COMMENT_TREE_SOURCE_FIXTURE.read_text().strip()
@@ -238,6 +289,39 @@ def ingest_fixture_and_snapshot_items(
         )
         for item in RedditItem.objects.filter(
             reddit_id__in={payload.reddit_id for payload in payloads},
+        )
+    }
+
+
+def ingest_fixture_and_snapshot_full_items(
+    fixture_path: Path,
+    *,
+    item_type: str,
+) -> dict[str, tuple[str, str, str, str, str, str, object]]:
+    """Ingest one fixture and return all deterministic RedditItem upsert fields."""
+    payloads = parse_fixture_payloads(fixture_path)
+    spec = build_fixture_spec(fixture_path)
+
+    result = fetch_feed_normalize_and_match(
+        spec,
+        client=FixtureRedditClient(fixture_path),
+    )
+
+    assert result.fetched_count == len(payloads)
+    assert result.upserted_count == len(payloads)
+    return {
+        item.reddit_id: (
+            item.item_type,
+            item.subreddit,
+            item.author,
+            item.title,
+            item.body,
+            item.permalink,
+            item.occurred_at,
+        )
+        for item in RedditItem.objects.filter(
+            reddit_id__in={payload.reddit_id for payload in payloads},
+            item_type=item_type,
         )
     }
 
@@ -284,11 +368,7 @@ def first_searchable_word(value: str) -> str:
 def build_fixture_spec(fixture_path: Path) -> RedditFeedSpec:
     """Build a feed spec that gives each raw fixture a stable fetch-state key."""
     kind = infer_feed_kind(fixture_path.name)
-    feed_format = (
-        RedditFeedFormat.JSON
-        if fixture_path.suffix == ".json"
-        else RedditFeedFormat.RSS
-    )
+    feed_format = RedditFeedFormat.JSON if fixture_path.suffix == ".json" else RedditFeedFormat.RSS
     query = infer_query(fixture_path.name)
     return RedditFeedSpec(
         kind=kind,

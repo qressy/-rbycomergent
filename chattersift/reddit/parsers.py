@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
 from html import unescape
@@ -51,11 +52,17 @@ def parse_reddit_json_response(
     document = _load_json_document(raw_response)
     payloads: list[RedditItemPayload] = []
     seen_ids: set[str] = set()
+    current_post_title = ""
 
     for kind, child_data in _iter_json_items(document):
         payload = _payload_from_json_child(kind, child_data)
         if payload is None or payload.reddit_id in seen_ids:
             continue
+
+        if payload.item_type == RedditItem.RedditItemType.POST:
+            current_post_title = payload.title
+        elif not payload.title and current_post_title:
+            payload = replace(payload, title=current_post_title)
 
         seen_ids.add(payload.reddit_id)
         payloads.append(payload)
@@ -232,7 +239,7 @@ def _payload_from_atom_entry(entry: etree.Element) -> RedditItemPayload | None:
         permalink=permalink,
         occurred_at=occurred_at,
         author=author,
-        title=_entry_text(entry, "atom:title"),
+        title=_atom_title(entry, item_type=item_type),
         body=_atom_body(entry),
     )
 
@@ -264,7 +271,21 @@ def _atom_body(entry: etree.Element) -> str:
     text = _strip_html(content)
     footer_marker = " submitted by "
     footer_index = text.find(footer_marker)
-    return text if footer_index == -1 else text[:footer_index].strip()
+    if footer_index != -1:
+        return text[:footer_index].strip()
+    if text.startswith("submitted by "):
+        return ""
+    return text
+
+
+def _atom_title(entry: etree.Element, *, item_type: str) -> str:
+    """Return Atom title text normalized to the equivalent JSON title field."""
+    title = _entry_text(entry, "atom:title")
+    if item_type != RedditItem.RedditItemType.COMMENT:
+        return title
+
+    match = re.match(r"^/u/[^ ]+ on (?P<title>.+)$", title)
+    return match.group("title") if match else title
 
 
 def _json_title(item_type: str, data: dict[str, Any]) -> str:
@@ -275,10 +296,34 @@ def _json_title(item_type: str, data: dict[str, Any]) -> str:
 
 def _json_body(item_type: str, data: dict[str, Any]) -> str:
     if item_type == RedditItem.RedditItemType.COMMENT:
-        return _collapse_whitespace(_as_str(data.get("body")))
-    return _collapse_whitespace(
-        _as_str(data.get("selftext")) or _as_str(data.get("body")),
+        return _json_text_content(
+            data,
+            html_fields=("body_html",),
+            text_fields=("body",),
+        )
+    return _json_text_content(
+        data,
+        html_fields=("selftext_html", "body_html"),
+        text_fields=("selftext", "body"),
     )
+
+
+def _json_text_content(
+    data: dict[str, Any],
+    *,
+    html_fields: tuple[str, ...],
+    text_fields: tuple[str, ...],
+) -> str:
+    """Prefer Reddit HTML fields so JSON and Atom bodies normalize identically."""
+    for field in html_fields:
+        value = _as_str(data.get(field))
+        if value:
+            return _strip_html(value)
+    for field in text_fields:
+        value = _as_str(data.get(field))
+        if value:
+            return _collapse_whitespace(value)
+    return ""
 
 
 def _item_type_from_fullname(reddit_id: str) -> str | None:
