@@ -4,7 +4,7 @@ from dataclasses import asdict
 
 from celery import shared_task
 
-from .clients import RedditClient
+from .clients import build_default_reddit_client
 from .ingestion import fetch_due_feeds
 from .services import fetch_normalize_and_match
 
@@ -18,4 +18,4 @@ def fetch_due_reddit_feeds(limit: int | None = None) -> dict:
 @shared_task()
 def fetch_subreddit(subreddit: str) -> int:
     """Compatibility task for the legacy subreddit fetch entrypoint."""
-    return fetch_normalize_and_match(subreddit, client=RedditClient())
+    return fetch_normalize_and_match(subreddit, client=build_default_reddit_client())

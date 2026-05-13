@@ -7,6 +7,7 @@ from django.db import transaction
 from chattersift.tracking.models import Match
 
 from .clients import RedditClient
+from .clients import build_default_reddit_client
 from .contracts import FetchResult
 from .contracts import IngestionResult
 from .matching import KeywordRedditMatcher
@@ -43,7 +44,7 @@ def fetch_feed_normalize_and_match(
         against relevant MonitorIntent rows, regardless of whether the source
         feed produced posts or comments.
     """
-    feed_client = client or RedditClient()
+    feed_client = client or build_default_reddit_client()
 
     try:
         payloads = feed_client.fetch_feed(spec)

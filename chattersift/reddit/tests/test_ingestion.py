@@ -6,10 +6,12 @@ from datetime import datetime
 import pytest
 
 from chattersift.reddit.clients import RedditClient
+from chattersift.reddit.contracts import FetchResult
 from chattersift.reddit.contracts import RedditFeedFormat
 from chattersift.reddit.contracts import RedditFeedKind
 from chattersift.reddit.contracts import RedditFeedSpec
 from chattersift.reddit.contracts import RedditItemPayload
+from chattersift.reddit.ingestion import fetch_due_feeds
 from chattersift.reddit.ingestion import fetch_feed_normalize_and_match
 from chattersift.reddit.models import RedditItem
 from chattersift.reddit.models import SubredditFetchState
@@ -116,3 +118,43 @@ def test_fetch_feed_normalize_and_match_records_failure_state() -> None:
     assert state.consecutive_failures == 1
     assert state.last_error == "reddit unavailable"
     assert state.next_fetch_at is not None
+
+
+def test_fetch_due_feeds_uses_default_client_factory(monkeypatch, settings) -> None:
+    settings.CHATTERSIFT_REDDIT_FEED_FORMAT = "rss"
+    user = UserFactory()
+    Monitor.objects.create(user=user, subreddit="django", keyword="postgres")
+    expected_spec = RedditFeedSpec(
+        kind=RedditFeedKind.COMMENT_STREAM,
+        format=RedditFeedFormat.RSS,
+        subreddit="django",
+    )
+    called = {"factory": 0, "fetch": 0}
+
+    class StubClient(RedditClient):
+        def fetch_feed(self, spec: RedditFeedSpec) -> list[RedditItemPayload]:
+            called["fetch"] += 1
+            assert spec == expected_spec
+            return []
+
+    def fake_get_due_feed_specs(*, limit: int | None = None) -> list[RedditFeedSpec]:
+        assert limit == 1
+        return [expected_spec]
+
+    def fake_build_default_reddit_client() -> RedditClient:
+        called["factory"] += 1
+        return StubClient()
+
+    def fake_mark_feed_success(feed_spec: RedditFeedSpec, result: FetchResult) -> None:
+        assert feed_spec == expected_spec
+        assert result.fetched_count == 0
+
+    monkeypatch.setattr("chattersift.reddit.ingestion.get_due_feed_specs", fake_get_due_feed_specs)
+    monkeypatch.setattr("chattersift.reddit.ingestion.build_default_reddit_client", fake_build_default_reddit_client)
+    monkeypatch.setattr("chattersift.reddit.ingestion.mark_feed_success", fake_mark_feed_success)
+
+    result = fetch_due_feeds(limit=1)
+
+    assert called == {"factory": 1, "fetch": 1}
+    assert result.attempted_count == 1
+    assert result.succeeded_count == 1
