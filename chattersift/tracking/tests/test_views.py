@@ -111,6 +111,19 @@ def test_dashboard_template_contains_htmx_controls_and_match_badges(client, user
     assert content.count("badge badge-accent badge-outline") == EXPECTED_MATCH_BADGE_COUNT
 
 
+def test_dashboard_labels_matches_as_posts_or_comments(client, user) -> None:
+    monitor = Monitor.objects.create(user=user, subreddit="django", keyword="postgres")
+    _create_match(monitor, reddit_item_id="t3_postgres", title="Django Postgres deployment")
+    _create_match(monitor, reddit_item_id="t1_postgres", title="", body="Comment about Postgres")
+    client.force_login(user)
+
+    response = client.get(reverse("tracking:dashboard"))
+
+    content = response.content.decode()
+    assert '<span class="badge badge-info badge-outline">Post</span>' in content
+    assert '<span class="badge badge-info badge-outline">Comment</span>' in content
+
+
 def test_dashboard_shows_empty_match_state(client, user) -> None:
     Monitor.objects.create(user=user, subreddit="django", keyword="postgres")
     client.force_login(user)
@@ -120,12 +133,18 @@ def test_dashboard_shows_empty_match_state(client, user) -> None:
     assert "No matches yet" in response.content.decode()
 
 
-def _create_match(monitor: Monitor, *, reddit_item_id: str, title: str = "Django thread") -> Match:
+def _create_match(
+    monitor: Monitor,
+    *,
+    reddit_item_id: str,
+    title: str = "Django thread",
+    body: str = "Body mentioning a keyword.",
+) -> Match:
     return Match.objects.create(
         monitor=monitor,
         reddit_item_id=reddit_item_id,
         title=title,
-        body="Body mentioning a keyword.",
+        body=body,
         permalink=f"https://www.reddit.com/r/{monitor.subreddit}/comments/{reddit_item_id}/example/",
         occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
     )

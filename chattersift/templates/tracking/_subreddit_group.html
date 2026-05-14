@@ -53,6 +53,7 @@
               </time>
             </div>
             <div class="flex shrink-0 flex-wrap gap-1 sm:justify-end">
+              <span class="badge badge-info badge-outline">{{ match.item_type_label }}</span>
               {% for keyword in match.keywords %}<span class="badge badge-accent badge-outline">{{ keyword }}</span>{% endfor %}
             </div>
           </div>

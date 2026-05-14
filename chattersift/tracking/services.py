@@ -21,6 +21,7 @@ class DashboardMatch:
     """Interface: presents one Reddit item with all active matched keywords."""
 
     reddit_item_id: str
+    item_type_label: str
     title: str
     body: str
     permalink: str
@@ -157,9 +158,20 @@ def _build_dashboard_match(matches: list[Match]) -> DashboardMatch:
     keywords = tuple(sorted({str(match.monitor.keyword) for match in matches}, key=str.casefold))
     return DashboardMatch(
         reddit_item_id=cast("str", first_match.reddit_item_id),
+        item_type_label=_reddit_item_type_label(cast("str", first_match.reddit_item_id)),
         title=cast("str", first_match.title),
         body=cast("str", first_match.body),
         permalink=cast("str", first_match.permalink),
         occurred_at=first_match.occurred_at,
         keywords=keywords,
     )
+
+
+def _reddit_item_type_label(reddit_item_id: str) -> str:
+    """Interface: returns a user-facing Reddit item type from a fullname."""
+
+    if reddit_item_id.startswith("t1_"):
+        return "Comment"
+    if reddit_item_id.startswith("t3_"):
+        return "Post"
+    return "Reddit item"
