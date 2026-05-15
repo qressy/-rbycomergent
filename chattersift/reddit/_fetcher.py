@@ -108,10 +108,10 @@ async def _send_request(
     try:
         response = await client.get(request_spec.path, params=request_spec.params, headers=headers)
     except httpx.TimeoutException as error:
-        msg = "Reddit request timed out"
+        msg = f"Reddit request timed out: {_format_httpx_error(error)}"
         raise RedditTimeoutError(msg) from error
     except httpx.TransportError as error:
-        msg = "Reddit transport error"
+        msg = f"Reddit transport error: {_format_httpx_error(error)}"
         raise RedditTransportError(msg) from error
 
     if response.status_code == HTTP_STATUS_RATE_LIMIT:
@@ -121,6 +121,14 @@ async def _send_request(
         msg = f"Reddit request failed with HTTP {response.status_code}"
         raise RedditHttpStatusError(msg)
     return response
+
+
+def _format_httpx_error(error: httpx.HTTPError) -> str:
+    """Return the concrete HTTPX exception type and message for diagnostics."""
+    error_message = str(error)
+    if not error_message:
+        return error.__class__.__name__
+    return f"{error.__class__.__name__}: {error_message}"
 
 
 def build_request_url(spec: RedditFeedSpec) -> str:

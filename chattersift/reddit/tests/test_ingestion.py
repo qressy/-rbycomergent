@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC
 from datetime import datetime
 
@@ -220,3 +221,29 @@ def test_fetch_due_feeds_uses_default_client_factory(monkeypatch, settings) -> N
     assert called == {"factory": 1, "fetch": 1}
     assert result.attempted_count == 1
     assert result.succeeded_count == 1
+
+
+def test_fetch_due_feeds_logs_failed_feed_attempts(monkeypatch, caplog) -> None:
+    spec = RedditFeedSpec(
+        kind=RedditFeedKind.POST_STREAM,
+        format=RedditFeedFormat.RSS,
+        subreddit="django",
+    )
+
+    def fake_get_due_feed_specs(*, limit: int | None = None) -> list[RedditFeedSpec]:
+        assert limit is None
+        return [spec]
+
+    monkeypatch.setattr("chattersift.reddit.ingestion.get_due_feed_specs", fake_get_due_feed_specs)
+    caplog.set_level(logging.WARNING, logger="chattersift.reddit.ingestion")
+
+    result = fetch_due_feeds(client=FailingRedditClient())
+
+    assert result.attempted_count == 1
+    assert result.failed_count == 1
+    assert "Reddit feed fetch failed" in caplog.text
+    assert "kind=post_stream" in caplog.text
+    assert "format=rss" in caplog.text
+    assert "subreddit=django" in caplog.text
+    assert "error_type=RuntimeError" in caplog.text
+    assert "reddit unavailable" in caplog.text

@@ -268,7 +268,7 @@ def test_timeout_raises_reddit_timeout_error(settings) -> None:
 
     transport = httpx.MockTransport(handler)
     async_client = httpx.AsyncClient(base_url="https://www.reddit.com", transport=transport)
-    with pytest.raises(RedditTimeoutError):
+    with pytest.raises(RedditTimeoutError, match="ReadTimeout: timed out"):
         _run(
             fetch_and_parse(
                 _spec(
@@ -291,7 +291,7 @@ def test_transport_error_raises_reddit_transport_error(settings) -> None:
 
     transport = httpx.MockTransport(handler)
     async_client = httpx.AsyncClient(base_url="https://www.reddit.com", transport=transport)
-    with pytest.raises(RedditTransportError):
+    with pytest.raises(RedditTransportError, match="ConnectError: network down"):
         _run(
             fetch_and_parse(
                 _spec(

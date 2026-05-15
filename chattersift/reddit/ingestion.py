@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from django.db import transaction
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from .matching import RedditMatcher
 
 MISSING_PAYLOAD_FIELD = "Payload is missing a required RedditItem field."
+logger = logging.getLogger(__name__)
 
 
 def fetch_feed_normalize_and_match(
@@ -96,7 +98,17 @@ def fetch_due_feeds(
                 keyword_matcher=keyword_matcher,
                 semantic_matcher=semantic_matcher,
             )
-        except Exception:  # noqa: BLE001
+        except Exception as error:  # noqa: BLE001
+            logger.warning(
+                "Reddit feed fetch failed; kind=%s format=%s subreddit=%s query_fingerprint=%s error_type=%s error=%s",
+                spec.kind,
+                spec.format,
+                spec.subreddit,
+                spec.query_fingerprint,
+                error.__class__.__name__,
+                error,
+                exc_info=True,
+            )
             failed_count += 1
             continue
 
