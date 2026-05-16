@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% load static i18n %}
+
+{% block body %}
+  <div class="drawer lg:drawer-open">
+    <input id="dash-drawer" type="checkbox" class="drawer-toggle" />
+    <!-- Main content area -->
+    <div class="drawer-content flex flex-col min-h-screen bg-base-200">
+      <!-- Top bar -->
+      <div class="navbar bg-base-100 border-b border-base-300 px-4 lg:px-6 gap-2">
+        <label for="dash-drawer"
+               class="btn btn-ghost btn-square drawer-button lg:hidden"
+               aria-label="{% translate 'Open menu' %}">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-5 w-5"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+          </svg>
+        </label>
+        <div class="flex-1">
+          {% block dash_topbar %}
+          {% endblock dash_topbar %}
+        </div>
+        <div id="global-loading"
+             class="htmx-indicator inline-flex items-center gap-2 text-primary">
+          <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+          <span class="text-sm font-medium hidden sm:inline">{% translate "Loading" %}</span>
+        </div>
+        {% include "dash/_user_menu.html" %}
+      </div>
+      <!-- Messages -->
+      {% if messages %}
+        <div class="px-4 lg:px-6 pt-4">
+          {% for message in messages %}
+            <div role="alert"
+                 class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} mb-2">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <!-- Page content -->
+      <main class="flex-1 p-4 lg:p-6">
+        {% block dash_content %}
+        {% endblock dash_content %}
+      </main>
+    </div>
+    <!-- Sidebar -->
+    <div class="drawer-side z-40">
+      <label for="dash-drawer"
+             aria-label="{% translate 'Close menu' %}"
+             class="drawer-overlay"></label>
+      {% include "dash/_sidebar_nav.html" %}
+    </div>
+  </div>
+{% endblock body %}

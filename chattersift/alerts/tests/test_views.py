@@ -19,14 +19,15 @@ def test_notification_settings_requires_login(client) -> None:
     assert response.url == f"{reverse(settings.LOGIN_URL)}?next=/notifications/"
 
 
-def test_notification_settings_renders_account_email(client, user) -> None:
+def test_notification_settings_redirects_to_dashboard(client, user) -> None:
     client.force_login(user)
 
     response = client.get(reverse("alerts:notification_settings"))
 
     assert response.status_code == HTTPStatus.OK
-    assert user.email in response.content.decode()
-    assert EmailNotificationPreference.objects.get(user=user).cadence == NotificationCadence.OFF
+    content = response.content.decode()
+    assert "Go to Settings" in content
+    assert reverse("tracking:dashboard_settings") in content
 
 
 def test_notification_settings_updates_cadence(client, user) -> None:

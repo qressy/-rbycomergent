@@ -1,22 +1,16 @@
 {% extends "base.html" %}
 
-{% load static %}
+{% load static i18n %}
 
 {% block title %}
-  User:
-  {{ object.name }}
+  {{ object.name|default:object.email }}
 {% endblock title %}
 {% block content %}
-  <div class="space-y-6">
-    <h2 class="text-2xl font-bold">{{ object.name }}</h2>
+  <div class="space-y-4">
+    <h2 class="text-2xl font-bold">{{ object.name|default:object.email }}</h2>
     {% if object == request.user %}
-      <div class="flex flex-wrap gap-3">
-        <a class="btn btn-primary btn-sm" href="{% url 'users:update' %}">My Info</a>
-        <a class="btn btn-primary btn-sm" href="{% url 'account_email' %}">E-Mail</a>
-        <a class="btn btn-primary btn-sm"
-           href="{% url 'alerts:notification_settings' %}">Notifications</a>
-        <a class="btn btn-primary btn-sm" href="{% url 'mfa_index' %}">MFA</a>
-      </div>
+      <a class="btn btn-primary btn-sm"
+         href="{% url 'tracking:dashboard_settings' %}">{% translate "Go to Settings" %}</a>
     {% endif %}
   </div>
 {% endblock content %}

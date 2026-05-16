@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "dash_base.html" %}
 
 {% load i18n %}
 
 {% block title %}
   {% translate "Dashboard" %} - ChatterSift
 {% endblock title %}
-{% block main %}
+{% block dash_content %}
   {% include "tracking/_dashboard_content.html" %}
-{% endblock main %}
+{% endblock dash_content %}
