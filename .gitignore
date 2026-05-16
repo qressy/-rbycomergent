@@ -277,3 +277,4 @@ chattersift/static/css/project.css
 .env
 .envrc.local
 .envs/*
+/mailpit
