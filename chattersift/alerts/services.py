@@ -222,6 +222,7 @@ def render_user_match_alerts(alerts: Iterable[UserMatchAlert]) -> list[RenderedU
 
 
 def _eligible_preferences(*, user_ids: set[int]) -> list[EmailNotificationPreference]:
+    """Load started email preferences for users that have pending match alerts."""
     return list(
         EmailNotificationPreference.objects.filter(
             user_id__in=user_ids,
@@ -231,6 +232,7 @@ def _eligible_preferences(*, user_ids: set[int]) -> list[EmailNotificationPrefer
 
 
 def _preferences_with_monitor_cadence(*, cadence: str) -> list[EmailNotificationPreference]:
+    """Load distinct started preferences for users with active monitors at a cadence."""
     return list(
         EmailNotificationPreference.objects.filter(
             started_at__isnull=False,
@@ -248,6 +250,7 @@ def _pending_matches_for_user(
     monitor_cadences: Iterable[str],
     match_ids: Iterable[int] | None = None,
 ):
+    """Return undelivered matches for one user filtered by monitor cadence and ids."""
     delivered_items = EmailMatchDelivery.objects.filter(
         user_id=preference.user_id,
         reddit_item_id=OuterRef("reddit_item_id"),
@@ -274,6 +277,7 @@ def _send_preference_digest(
     schedule: EmailNotificationSchedule | None = None,
     now: datetime | None = None,
 ) -> bool:
+    """Send one digest email and enqueue delivery tracking for included Reddit items."""
     alerts = build_user_match_alerts(matches)
     if not alerts or not _has_verified_account_email(preference):
         return False
@@ -308,6 +312,7 @@ def _send_preference_digest(
 
 
 def _has_verified_account_email(preference: EmailNotificationPreference) -> bool:
+    """Check whether the preference user has a verified account email address."""
     return EmailAddress.objects.filter(
         user_id=preference.user_id,
         email=preference.user.email,
@@ -316,11 +321,13 @@ def _has_verified_account_email(preference: EmailNotificationPreference) -> bool
 
 
 def _digest_subject(alert_count: int) -> str:
+    """Build singular/plural digest subject text based on alert count."""
     item_label = "match" if alert_count == 1 else "matches"
     return f"ChatterSift: {alert_count} new Reddit {item_label}"
 
 
 def _highlight_keywords(text: str, keywords: Iterable[str]) -> SafeString:
+    """Escape text and wrap case-insensitive keyword matches in <mark> tags."""
     if not text:
         return mark_safe("")
 
@@ -346,4 +353,5 @@ def _highlight_keywords(text: str, keywords: Iterable[str]) -> SafeString:
 
 
 def _keyword_length(keyword: str) -> int:
+    """Return keyword length for deterministic longest-first highlighting sort."""
     return len(keyword)

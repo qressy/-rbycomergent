@@ -218,6 +218,7 @@ def _stream_requirements(
     intents: list[MonitorIntent],
     feed_format: RedditFeedFormat,
 ) -> list[tuple[str, bool, bool]]:
+    """Summarize per-subreddit post/comment stream requirements from monitor intents."""
     requirements: dict[str, tuple[bool, bool]] = {}
 
     for intent in intents:
@@ -246,9 +247,11 @@ def _stream_requirements(
 
 
 def _feed_spec_identity(spec: RedditFeedSpec) -> tuple[str, str, str, str]:
+    """Return the canonical identity tuple used to dedupe feed specifications."""
     return (spec.kind, spec.format, spec.subreddit.casefold(), spec.query_fingerprint)
 
 
 def _quote_query_term(keyword: str) -> str:
+    """Wrap a query term in quotes with embedded quotes escaped for Reddit search."""
     escaped_keyword = keyword.replace('"', '\\"')
     return f'"{escaped_keyword}"'

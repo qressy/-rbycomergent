@@ -105,6 +105,7 @@ async def _send_request(
     *,
     headers: dict[str, str],
 ) -> httpx.Response:
+    """Execute one Reddit request and normalize transport/status failures."""
     try:
         response = await client.get(request_spec.path, params=request_spec.params, headers=headers)
     except httpx.TimeoutException as error:
@@ -199,6 +200,7 @@ def get_http_timeout_seconds() -> float:
 
 
 def _validated_subreddit(subreddit: str) -> str:
+    """Return a cleaned subreddit value after rejecting unsafe path/query tokens."""
     value = subreddit.strip()
     if not value:
         return ""

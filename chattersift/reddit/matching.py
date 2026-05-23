@@ -128,6 +128,7 @@ def evaluate_match_requests(
 
 
 def _keyword_searchable_text(item: RedditItemPayload) -> str:
+    """Return normalized item text used by keyword matching evaluators."""
     if item.item_type == "comment":
         return item.body.casefold()
     return f"{item.title}\n{item.body}".casefold()

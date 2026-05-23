@@ -145,6 +145,7 @@ def calculate_next_fetch_at(
 
 
 def _calculate_next_fetch_at(*, failed: bool, consecutive_failures: int) -> datetime:
+    """Return next run time using normal interval or exponential failure backoff."""
     if not failed:
         return timezone.now() + timedelta(
             seconds=settings.CHATTERSIFT_REDDIT_FETCH_INTERVAL_SECONDS,
@@ -160,10 +161,12 @@ def _calculate_next_fetch_at(*, failed: bool, consecutive_failures: int) -> date
 
 
 def _state_lookup(spec: RedditFeedSpec) -> dict[str, str]:
+    """Build ORM lookup kwargs for a feed spec's persisted scheduling state."""
     return cast("dict[str, str]", asdict(_state_identity(spec)))
 
 
 def _state_identity(spec: RedditFeedSpec) -> _FeedStateIdentity:
+    """Project a feed spec into the dataclass identity used across scheduling helpers."""
     return _FeedStateIdentity(
         kind=spec.kind,
         format=spec.format,
@@ -173,6 +176,7 @@ def _state_identity(spec: RedditFeedSpec) -> _FeedStateIdentity:
 
 
 def _state_identity_from_state(state: SubredditFetchState) -> _FeedStateIdentity:
+    """Project a persisted fetch-state row into its comparable identity tuple."""
     return _FeedStateIdentity(
         kind=cast("str", state.kind),
         format=cast("str", state.format),

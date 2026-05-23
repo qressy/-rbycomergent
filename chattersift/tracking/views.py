@@ -204,6 +204,7 @@ def dashboard_settings_profile(request: HttpRequest) -> HttpResponse:
 
 
 def _dashboard_context(request: HttpRequest, *, form: MonitorBatchForm | None = None) -> dict[str, object]:
+    """Build the dashboard template context for full-page and partial renders."""
     subreddit_groups = build_dashboard_groups(request.user, include_matches=False)
     form = form or MonitorBatchForm()
     return {
@@ -219,6 +220,7 @@ def _render_dashboard_content(
     *,
     form: MonitorBatchForm,
 ) -> HttpResponse:
+    """Render just the dashboard content fragment used by HTMX updates."""
     html = render_to_string(
         "tracking/_dashboard_content.html",
         _dashboard_context(request, form=form),
@@ -228,6 +230,7 @@ def _render_dashboard_content(
 
 
 def _matches_query_url(*, subreddit: str | None, page: int) -> str:
+    """Build a stable query string for matches filters and pagination links."""
     params = QueryDict(mutable=True)
     if subreddit:
         params["subreddit"] = subreddit
@@ -240,6 +243,7 @@ def _matches_query_url(*, subreddit: str | None, page: int) -> str:
 
 
 def _positive_int_or_default(raw_value: str | None, *, default: int) -> int:
+    """Parse a positive integer, or fall back to the provided default value."""
     if raw_value is None:
         return default
     try:

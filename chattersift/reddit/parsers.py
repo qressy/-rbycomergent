@@ -86,6 +86,7 @@ def parse_reddit_atom_response(
 
 
 def _load_atom_document(raw_response: str | bytes | bytearray) -> etree.Element:
+    """Parse Reddit Atom XML with hardened parser settings."""
     parser = etree.XMLParser(
         resolve_entities=False,
         no_network=True,
@@ -102,6 +103,7 @@ def _load_atom_document(raw_response: str | bytes | bytearray) -> etree.Element:
 
 
 def _load_json_document(raw_response: str | bytes | bytearray | Any) -> Any:
+    """Decode JSON bytes/strings, or pass through pre-decoded objects."""
     if isinstance(raw_response, bytes | bytearray):
         return json.loads(raw_response.decode())
     if isinstance(raw_response, str):
@@ -245,11 +247,13 @@ def _payload_from_atom_entry(entry: etree.Element) -> RedditItemPayload | None:
 
 
 def _entry_text(entry: etree.Element, path: str) -> str:
+    """Read and normalize text from an Atom entry node path."""
     node = entry.find(path, ATOM_NS)
     return "" if node is None or node.text is None else _collapse_whitespace(node.text)
 
 
 def _atom_subreddit(entry: etree.Element, href: str) -> str:
+    """Extract subreddit from Atom category metadata or permalink fallback."""
     category = entry.find("atom:category", ATOM_NS)
     if category is not None:
         subreddit = _normalize_subreddit(
@@ -289,12 +293,14 @@ def _atom_title(entry: etree.Element, *, item_type: str) -> str:
 
 
 def _json_title(item_type: str, data: dict[str, Any]) -> str:
+    """Return the normalized title field for post/comment JSON payloads."""
     if item_type == RedditItem.RedditItemType.COMMENT:
         return _collapse_whitespace(_as_str(data.get("link_title")))
     return _collapse_whitespace(_as_str(data.get("title")))
 
 
 def _json_body(item_type: str, data: dict[str, Any]) -> str:
+    """Return normalized body text for post/comment JSON payloads."""
     if item_type == RedditItem.RedditItemType.COMMENT:
         return _json_text_content(
             data,
@@ -336,6 +342,7 @@ def _item_type_from_fullname(reddit_id: str) -> str | None:
 
 
 def _timestamp_to_datetime(value: Any) -> datetime | None:
+    """Convert Unix timestamp-like input to a UTC datetime, if valid."""
     if value is None:
         return None
 
@@ -346,6 +353,7 @@ def _timestamp_to_datetime(value: Any) -> datetime | None:
 
 
 def _parse_datetime(value: str) -> datetime | None:
+    """Parse an ISO-like datetime string and ensure it is timezone-aware."""
     if not value:
         return None
 

@@ -323,6 +323,7 @@ def match_reddit_items(items: Iterable[RedditItem]) -> int:
 
 
 def _keyword_searchable_text(item: RedditItem) -> str:
+    """Return normalized text used for case-insensitive keyword checks."""
     if item.item_type == "comment":
         return item.body.casefold()
     return f"{item.title}\n{item.body}".casefold()
@@ -334,6 +335,7 @@ def _build_dashboard_matches_by_subreddit(
     subreddits: Iterable[str],
     match_limit_per_subreddit: int,
 ) -> dict[str, list[DashboardMatch]]:
+    """Group recent matches by subreddit and Reddit item for dashboard display."""
     subreddit_set = set(subreddits)
     if not subreddit_set:
         return {}
@@ -363,6 +365,7 @@ def _build_dashboard_matches_by_subreddit(
 
 
 def _build_dashboard_match(matches: list[Match]) -> DashboardMatch:
+    """Convert one Reddit item's grouped Match rows into a dashboard payload."""
     first_match = matches[0]
     keywords = tuple(sorted({str(match.monitor.keyword) for match in matches}, key=str.casefold))
     return DashboardMatch(
@@ -387,6 +390,7 @@ def _reddit_item_type_label(reddit_item_id: str) -> str:
 
 
 def _build_matches_feed_item(matches: list[Match]) -> MatchesFeedItem:
+    """Build one matches-feed item with keyword highlights from grouped matches."""
     first_match = matches[0]
     keywords = tuple(sorted({str(match.monitor.keyword) for match in matches}, key=str.casefold))
     return MatchesFeedItem(
@@ -402,6 +406,7 @@ def _build_matches_feed_item(matches: list[Match]) -> MatchesFeedItem:
 
 
 def _highlighted_snippet(text: str, *, keywords: tuple[str, ...], max_length: int) -> SafeString:
+    """Return escaped HTML with matched keywords wrapped in <mark> tags."""
     normalized = text.strip()
     if not normalized:
         return format_html("{}", "")
@@ -422,6 +427,7 @@ def _highlighted_snippet(text: str, *, keywords: tuple[str, ...], max_length: in
 
 
 def _snippet_window(text: str, *, keywords: tuple[str, ...], max_length: int) -> str:
+    """Extract a bounded snippet, centering around the first keyword when possible."""
     if len(text) <= max_length:
         return text
 
@@ -446,6 +452,7 @@ def _snippet_window(text: str, *, keywords: tuple[str, ...], max_length: int) ->
 
 
 def _keyword_pattern(keywords: tuple[str, ...]) -> re.Pattern[str] | None:
+    """Compile a case-insensitive regex from deduplicated non-blank keywords."""
     non_blank_keywords = [keyword.strip() for keyword in keywords if keyword.strip()]
     if not non_blank_keywords:
         return None

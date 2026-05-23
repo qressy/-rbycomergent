@@ -136,6 +136,7 @@ def _upsert_and_match_payloads(
     keyword_matcher: RedditMatcher | None,
     semantic_matcher: RedditMatcher | None,
 ) -> FetchResult:
+    """Upsert fetched payloads, evaluate monitor matches, and enqueue notifications."""
     valid_payloads = []
     upserted_count = 0
     skipped_count = 0
@@ -205,6 +206,7 @@ def _upsert_item(payload) -> tuple[RedditItem, bool]:
 
 
 def _persist_match_decisions(decisions, payloads: list) -> list[int]:
+    """Persist positive match decisions and return primary keys created this run."""
     payloads_by_id = {payload.reddit_id: payload for payload in payloads}
     created_match_ids: list[int] = []
 
@@ -233,6 +235,7 @@ def _persist_match_decisions(decisions, payloads: list) -> list[int]:
 
 
 def _validate_payload(payload) -> None:
+    """Ensure payload has required fields before any persistence attempt."""
     required_values = (
         payload.reddit_id,
         payload.item_type,
