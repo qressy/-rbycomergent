@@ -51,6 +51,7 @@ dependencies = [
 [dependency-groups]
 dev = [
   "coverage==7.14.0",
+  "django-browser-reload>=1.21.0",
   "django-coverage-plugin==3.2.2",
   "django-debug-toolbar==6.3.0",
   "django-extensions==4.1",

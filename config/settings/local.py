@@ -60,6 +60,11 @@ if env("USE_DOCKER", default="no") == "yes":
 # ------------------------------------------------------------------------------
 # https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
 INSTALLED_APPS += ["django_extensions"]
+
+# django-browser-reload
+# ------------------------------------------------------------------------------
+INSTALLED_APPS += ["django_browser_reload"]
+MIDDLEWARE += ["django_browser_reload.middleware.BrowserReloadMiddleware"]
 # Celery
 # ------------------------------------------------------------------------------
 
