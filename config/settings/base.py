@@ -80,6 +80,7 @@ THIRD_PARTY_APPS = [
     "allauth.mfa",
     "allauth.socialaccount",
     "django_celery_beat",
+    "widget_tweaks",
     "corsheaders",
 ]
 
@@ -131,6 +132,25 @@ CHATTERSIFT_REDDIT_FAILURE_BACKOFF_MAX_SECONDS = env.int(
     "CHATTERSIFT_REDDIT_FAILURE_BACKOFF_MAX_SECONDS",
     default=3600,
 )
+CHATTERSIFT_SEMANTIC_LLM_MODEL = env("CHATTERSIFT_SEMANTIC_LLM_MODEL", default="")
+CHATTERSIFT_SEMANTIC_LLM_TIMEOUT_SECONDS = env.float(
+    "CHATTERSIFT_SEMANTIC_LLM_TIMEOUT_SECONDS",
+    default=20.0,
+)
+CHATTERSIFT_SEMANTIC_LLM_MAX_TOKENS = env.int(
+    "CHATTERSIFT_SEMANTIC_LLM_MAX_TOKENS",
+    default=256,
+)
+CHATTERSIFT_SEMANTIC_MATCH_MAX_CALLS_PER_FEED = env.int(
+    "CHATTERSIFT_SEMANTIC_MATCH_MAX_CALLS_PER_FEED",
+    default=50,
+)
+CHATTERSIFT_SEMANTIC_MATCH_MAX_INPUT_CHARS = env.int(
+    "CHATTERSIFT_SEMANTIC_MATCH_MAX_INPUT_CHARS",
+    default=8000,
+)
+CHATTERSIFT_SEMANTIC_LLM_BASE_URL = env("CHATTERSIFT_SEMANTIC_LLM_BASE_URL", default="")
+CHATTERSIFT_SEMANTIC_LLM_API_KEY = env("CHATTERSIFT_SEMANTIC_LLM_API_KEY", default="")
 
 # MIGRATIONS
 # ------------------------------------------------------------------------------
@@ -276,7 +296,7 @@ EMAIL_TIMEOUT = 5
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = ['"Walden Cui" <contact@chattersift.com>']
+ADMINS = ["contact@chattersift.com"]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings

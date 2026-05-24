@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import TYPE_CHECKING
 from typing import cast
 
@@ -14,6 +15,7 @@ from django.utils.html import format_html_join
 
 from chattersift.alerts.models import NotificationCadence
 from chattersift.alerts.schedules import ensure_email_delivery_state
+from chattersift.reddit.contracts import MonitorMatchMode
 
 from .models import Match
 from .models import Monitor
@@ -30,7 +32,7 @@ User = get_user_model()
 
 @dataclass(frozen=True)
 class DashboardMatch:
-    """Presents one Reddit item with all active matched keywords."""
+    """Presents one Reddit item with all active matched monitor labels."""
 
     reddit_item_id: str
     item_type_label: str
@@ -39,6 +41,7 @@ class DashboardMatch:
     permalink: str
     occurred_at: object
     keywords: tuple[str, ...]
+    monitor_labels: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,7 @@ class MatchesFeedItem:
     permalink: str
     occurred_at: object
     keywords: tuple[str, ...]
+    monitor_labels: tuple[str, ...]
     title_html: SafeString
     body_html: SafeString
 
@@ -95,13 +99,20 @@ def upsert_keyword_monitors(
     for keyword in keywords:
         monitor = (
             Monitor.objects.select_for_update()
-            .filter(user=user, subreddit=normalized_subreddit, keyword__iexact=keyword)
+            .filter(
+                user=user,
+                subreddit=normalized_subreddit,
+                match_mode=MonitorMatchMode.KEYWORD,
+                keyword__iexact=keyword,
+                semantic_fingerprint="",
+            )
             .first()
         )
         if monitor is None:
             monitor = Monitor.objects.create(
                 user=user,
                 subreddit=normalized_subreddit,
+                match_mode=MonitorMatchMode.KEYWORD,
                 keyword=keyword,
                 notification_cadence=cadence,
             )
@@ -116,11 +127,80 @@ def upsert_keyword_monitors(
     return monitors
 
 
+@transaction.atomic
+def upsert_monitors(  # noqa: PLR0913
+    *,
+    user: User,
+    subreddit: str,
+    match_mode: str,
+    keywords: Iterable[str],
+    semantic_description: str,
+    cadence: str = NotificationCadence.THIRTY_MINUTES,
+) -> list[Monitor]:
+    """Creates or reactivates monitors for one submitted dashboard intent."""
+
+    mode = MonitorMatchMode(match_mode)
+    if mode == MonitorMatchMode.KEYWORD:
+        return upsert_keyword_monitors(user=user, subreddit=subreddit, keywords=keywords, cadence=cadence)
+
+    normalized_subreddit = subreddit.casefold()
+    normalized_description = normalize_semantic_description(semantic_description)
+    semantic_fingerprint = semantic_description_fingerprint(normalized_description)
+    monitor_keywords = [""] if mode == MonitorMatchMode.SEMANTIC else list(keywords)
+    monitors: list[Monitor] = []
+
+    for keyword in monitor_keywords:
+        monitor = (
+            Monitor.objects.select_for_update()
+            .filter(
+                user=user,
+                subreddit=normalized_subreddit,
+                match_mode=mode,
+                keyword__iexact=keyword,
+                semantic_fingerprint=semantic_fingerprint,
+            )
+            .first()
+        )
+        if monitor is None:
+            monitor = Monitor.objects.create(
+                user=user,
+                subreddit=normalized_subreddit,
+                match_mode=mode,
+                keyword=keyword,
+                semantic_description=normalized_description,
+                semantic_fingerprint=semantic_fingerprint,
+                notification_cadence=cadence,
+            )
+            ensure_email_delivery_state(user=user, cadence=cadence)
+        elif not monitor.is_active:
+            monitor.is_active = True
+            monitor.notification_cadence = cadence
+            monitor.semantic_description = normalized_description
+            monitor.save(
+                update_fields=[
+                    "is_active",
+                    "notification_cadence",
+                    "semantic_description",
+                    "updated_at",
+                ],
+            )
+            ensure_email_delivery_state(user=user, cadence=cadence)
+        monitors.append(monitor)
+
+    return monitors
+
+
 def add_keyword_to_subreddit(*, user: User, subreddit: str, keyword: str) -> Monitor:
     """Adds a single keyword monitor to an existing subreddit group."""
 
     normalized = subreddit.casefold()
-    monitor = Monitor.objects.filter(user=user, subreddit=normalized, keyword__iexact=keyword).first()
+    monitor = Monitor.objects.filter(
+        user=user,
+        subreddit=normalized,
+        match_mode=MonitorMatchMode.KEYWORD,
+        keyword__iexact=keyword,
+        semantic_fingerprint="",
+    ).first()
     if monitor is None:
         # Copy cadence from existing monitors in this group
         existing = Monitor.objects.filter(user=user, subreddit=normalized).first()
@@ -128,6 +208,7 @@ def add_keyword_to_subreddit(*, user: User, subreddit: str, keyword: str) -> Mon
         monitor = Monitor.objects.create(
             user=user,
             subreddit=normalized,
+            match_mode=MonitorMatchMode.KEYWORD,
             keyword=keyword,
             notification_cadence=cadence,
         )
@@ -188,7 +269,7 @@ def build_dashboard_groups(
 ) -> list[DashboardSubredditGroup]:
     """Returns current-user active monitor groups with aggregate matches."""
 
-    all_monitors = list(Monitor.objects.filter(user=user).order_by("subreddit", "keyword"))
+    all_monitors = list(Monitor.objects.filter(user=user).order_by("subreddit", "match_mode", "keyword"))
     monitors_by_subreddit: dict[str, list[Monitor]] = {}
     for monitor in all_monitors:
         monitors_by_subreddit.setdefault(monitor.subreddit, []).append(monitor)
@@ -302,6 +383,8 @@ def match_reddit_items(items: Iterable[RedditItem]) -> int:
     for item in items:
         searchable_text = _keyword_searchable_text(item)
         for monitor in active_monitors:
+            if monitor.match_mode == MonitorMatchMode.SEMANTIC:
+                continue
             if monitor.subreddit.casefold() != item.subreddit.casefold():
                 continue
             if monitor.keyword.casefold() not in searchable_text:
@@ -311,6 +394,9 @@ def match_reddit_items(items: Iterable[RedditItem]) -> int:
                 monitor=monitor,
                 reddit_item_id=item.reddit_id,
                 defaults={
+                    "match_mode": monitor.match_mode,
+                    "confidence": 1.0,
+                    "match_reason": f"keyword:{monitor.keyword}",
                     "title": item.title,
                     "body": item.body,
                     "permalink": item.permalink,
@@ -367,7 +453,8 @@ def _build_dashboard_matches_by_subreddit(
 def _build_dashboard_match(matches: list[Match]) -> DashboardMatch:
     """Convert one Reddit item's grouped Match rows into a dashboard payload."""
     first_match = matches[0]
-    keywords = tuple(sorted({str(match.monitor.keyword) for match in matches}, key=str.casefold))
+    keywords = _keyword_terms(matches)
+    monitor_labels = _monitor_labels(matches)
     return DashboardMatch(
         reddit_item_id=cast("str", first_match.reddit_item_id),
         item_type_label=_reddit_item_type_label(cast("str", first_match.reddit_item_id)),
@@ -376,6 +463,7 @@ def _build_dashboard_match(matches: list[Match]) -> DashboardMatch:
         permalink=cast("str", first_match.permalink),
         occurred_at=first_match.occurred_at,
         keywords=keywords,
+        monitor_labels=monitor_labels,
     )
 
 
@@ -392,7 +480,8 @@ def _reddit_item_type_label(reddit_item_id: str) -> str:
 def _build_matches_feed_item(matches: list[Match]) -> MatchesFeedItem:
     """Build one matches-feed item with keyword highlights from grouped matches."""
     first_match = matches[0]
-    keywords = tuple(sorted({str(match.monitor.keyword) for match in matches}, key=str.casefold))
+    keywords = _keyword_terms(matches)
+    monitor_labels = _monitor_labels(matches)
     return MatchesFeedItem(
         subreddit=cast("str", first_match.monitor.subreddit),
         reddit_item_id=cast("str", first_match.reddit_item_id),
@@ -400,9 +489,42 @@ def _build_matches_feed_item(matches: list[Match]) -> MatchesFeedItem:
         permalink=cast("str", first_match.permalink),
         occurred_at=first_match.occurred_at,
         keywords=keywords,
+        monitor_labels=monitor_labels,
         title_html=_highlighted_snippet(cast("str", first_match.title), keywords=keywords, max_length=180),
         body_html=_highlighted_snippet(cast("str", first_match.body), keywords=keywords, max_length=260),
     )
+
+
+def normalize_semantic_description(value: str) -> str:
+    """Return compact semantic description text for persistence and matching."""
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def semantic_description_fingerprint(value: str) -> str:
+    """Return stable monitor dedupe fingerprint for a semantic description."""
+    normalized = normalize_semantic_description(value).casefold()
+    if not normalized:
+        return ""
+    return sha256(normalized.encode()).hexdigest()
+
+
+def _keyword_terms(matches: Iterable[Match]) -> tuple[str, ...]:
+    """Return real keyword terms only, excluding semantic-only monitors."""
+    return tuple(
+        sorted(
+            {
+                str(match.monitor.keyword)
+                for match in matches
+                if match.monitor.keyword and match.monitor.match_mode != MonitorMatchMode.SEMANTIC
+            },
+            key=str.casefold,
+        ),
+    )
+
+
+def _monitor_labels(matches: Iterable[Match]) -> tuple[str, ...]:
+    """Return display labels for all monitors that matched an item."""
+    return tuple(sorted({match.monitor.label for match in matches if match.monitor.label}, key=str.casefold))
 
 
 def _highlighted_snippet(text: str, *, keywords: tuple[str, ...], max_length: int) -> SafeString:

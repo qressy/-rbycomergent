@@ -3,12 +3,20 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from chattersift.alerts.models import NotificationCadence
+from chattersift.reddit.contracts import MonitorMatchMode
 
 
 class Monitor(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     subreddit = models.CharField(max_length=100)
-    keyword = models.CharField(max_length=255)
+    match_mode = models.CharField(
+        max_length=32,
+        choices=MonitorMatchMode,
+        default=MonitorMatchMode.KEYWORD,
+    )
+    keyword = models.CharField(max_length=255, blank=True)
+    semantic_description = models.TextField(blank=True)
+    semantic_fingerprint = models.CharField(max_length=64, blank=True)
     is_active = models.BooleanField(default=True)
     notification_cadence = models.CharField(
         max_length=16,
@@ -19,24 +27,40 @@ class Monitor(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["subreddit", "keyword"]
+        ordering = ["subreddit", "match_mode", "keyword", "semantic_fingerprint"]
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "subreddit", "keyword"],
-                name="unique_monitor_per_user_subreddit_keyword",
+                fields=["user", "subreddit", "match_mode", "keyword", "semantic_fingerprint"],
+                name="unique_monitor_per_user_subreddit_mode",
             ),
         ]
 
     def __str__(self) -> str:
-        return _("%(keyword)s in r/%(subreddit)s") % {
-            "keyword": self.keyword,
+        return _("%(label)s in r/%(subreddit)s") % {
+            "label": self.label,
             "subreddit": self.subreddit,
         }
+
+    @property
+    def label(self) -> str:
+        """Return a compact user-facing monitor label."""
+        if self.match_mode == MonitorMatchMode.SEMANTIC:
+            return self.semantic_description
+        if self.match_mode == MonitorMatchMode.KEYWORD_SEMANTIC:
+            return f"{self.keyword} + semantic"
+        return self.keyword
 
 
 class Match(models.Model):
     monitor = models.ForeignKey(Monitor, on_delete=models.CASCADE)
     reddit_item_id = models.CharField(max_length=255)
+    match_mode = models.CharField(
+        max_length=32,
+        choices=MonitorMatchMode,
+        default=MonitorMatchMode.KEYWORD,
+    )
+    confidence = models.FloatField(null=True, blank=True)
+    match_reason = models.TextField(blank=True)
     title = models.TextField(blank=True)
     body = models.TextField(blank=True)
     permalink = models.URLField()

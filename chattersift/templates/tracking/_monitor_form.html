@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load widget_tweaks %}
 
 <div x-show="showForm"
      x-cloak
@@ -15,7 +16,7 @@
         hx-swap="outerHTML"
         hx-indicator="#global-loading"
         class="border border-base-300 bg-base-100 rounded-box overflow-hidden"
-        x-data="{ keywords: '' }">
+        x-data="{ keywords: '{{ form.keywords.value|default_if_none:''|escapejs }}', mode: '{{ form.match_mode.value|default:'keyword' }}' }">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div role="alert" class="alert alert-error rounded-none">
@@ -28,28 +29,23 @@
         <label class="label" for="id_subreddit">
           <span class="label-text font-medium">{% translate "Subreddit" %}</span>
         </label>
-        <input id="id_subreddit"
-               name="subreddit"
-               type="text"
-               maxlength="100"
-               value="{{ form.subreddit.value|default_if_none:'' }}"
-               class="input input-bordered w-full"
-               placeholder="r/django"
-               required />
+        {% render_field form.subreddit class+="input input-bordered w-full" placeholder="r/django" %}
         {% if form.subreddit.errors %}<p class="text-sm text-error mt-1">{{ form.subreddit.errors|join:", " }}</p>{% endif %}
       </div>
-      {# Keywords #}
+      {# Match mode #}
       <div class="form-control gap-1">
+        <label class="label" for="id_match_mode">
+          <span class="label-text font-medium">{% translate "Match mode" %}</span>
+        </label>
+        {% render_field form.match_mode class+="select select-bordered w-full" x-model="mode" %}
+      </div>
+      {# Keywords #}
+      <div class="form-control gap-1" x-show="mode !== 'semantic'">
         <label class="label" for="id_keywords">
           <span class="label-text font-medium">{% translate "Keywords" %}</span>
         </label>
-        <textarea id="id_keywords"
-                  name="keywords"
-                  class="textarea textarea-bordered min-h-24 w-full focus:border-primary focus:outline-none"
-                  maxlength="4096"
-                  placeholder="{% translate 'One keyword per line, or comma-separated' %}"
-                  required
-                  x-model="keywords">{{ form.keywords.value|default_if_none:'' }}</textarea>
+        {% translate "One keyword per line, or comma-separated" as keywords_placeholder %}
+        {% render_field form.keywords class+="textarea textarea-bordered min-h-24 w-full focus:border-primary focus:outline-none" maxlength="4096" placeholder=keywords_placeholder x-model="keywords" %}
         {% if form.keywords.errors %}<p class="text-sm text-error mt-1">{{ form.keywords.errors|join:", " }}</p>{% endif %}
         <div class="flex flex-wrap gap-1.5 mt-1"
              x-show="keywords.split(/[\n,]+/).map((k) => k.trim()).filter(Boolean).length"
@@ -60,17 +56,23 @@
           </template>
         </div>
       </div>
+      {# Semantic description #}
+      <div class="form-control gap-1" x-show="mode !== 'keyword'">
+        <label class="label" for="id_semantic_description">
+          <span class="label-text font-medium">{% translate "Semantic description" %}</span>
+        </label>
+        {% translate "Describe the Reddit posts or comments that should match" as semantic_placeholder %}
+        {% render_field form.semantic_description class+="textarea textarea-bordered min-h-28 w-full focus:border-primary focus:outline-none" placeholder=semantic_placeholder %}
+        {% if form.semantic_description.errors %}
+          <p class="text-sm text-error mt-1">{{ form.semantic_description.errors|join:", " }}</p>
+        {% endif %}
+      </div>
       {# Notification cadence #}
       <div class="form-control gap-1">
         <label class="label" for="id_cadence">
           <span class="label-text font-medium">{% translate "Notification frequency" %}</span>
         </label>
-        <select id="id_cadence" name="cadence" class="select select-bordered w-full">
-          {% for value, label in cadence_choices %}
-            <option value="{{ value }}"
-                    {% if value == form.cadence.value|default:"30m" %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+        {% render_field form.cadence class+="select select-bordered w-full" %}
       </div>
     </div>
     {# Footer #}

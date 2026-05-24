@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+from email.utils import getaddresses
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.db import transaction
 
 from chattersift.alerts.services import enqueue_immediate_match_notifications
+from chattersift.alerts.tasks import send_mail
 from chattersift.tracking.models import Match
 
 from .clients import RedditClient
@@ -13,6 +16,7 @@ from .clients import build_default_reddit_client
 from .contracts import FetchResult
 from .contracts import IngestionResult
 from .matching import KeywordRedditMatcher
+from .matching import SemanticEvaluationProblem
 from .matching import build_match_requests
 from .matching import evaluate_match_requests
 from .models import RedditItem
@@ -27,6 +31,7 @@ if TYPE_CHECKING:
 
 MISSING_PAYLOAD_FIELD = "Payload is missing a required RedditItem field."
 logger = logging.getLogger(__name__)
+ADMIN_TUPLE_LENGTH = 2
 
 
 def fetch_feed_normalize_and_match(
@@ -157,12 +162,15 @@ def _upsert_and_match_payloads(
 
     intents = build_monitor_intents_for_active_monitors()
     requests = build_match_requests(intents, valid_payloads)
+    semantic_problems: list[SemanticEvaluationProblem] = []
     decisions = evaluate_match_requests(
         requests,
         keyword_matcher=keyword_matcher or KeywordRedditMatcher(),
         semantic_matcher=semantic_matcher,
+        semantic_problem_collector=semantic_problems,
     )
     created_match_ids = _persist_match_decisions(decisions, valid_payloads)
+    _notify_admins_of_semantic_problems(spec, semantic_problems)
     enqueue_immediate_match_notifications(created_match_ids)
 
     return FetchResult(
@@ -226,6 +234,9 @@ def _persist_match_decisions(decisions, payloads: list) -> list[int]:
                 "body": payload.body,
                 "permalink": payload.permalink,
                 "occurred_at": payload.occurred_at,
+                "match_mode": decision.match_mode,
+                "confidence": decision.confidence,
+                "match_reason": decision.reason,
             },
         )
         if created and match.pk is not None:
@@ -245,3 +256,60 @@ def _validate_payload(payload) -> None:
     )
     if not all(required_values):
         raise ValueError(MISSING_PAYLOAD_FIELD)
+
+
+def _notify_admins_of_semantic_problems(
+    spec: RedditFeedSpec,
+    problems: list[SemanticEvaluationProblem],
+) -> None:
+    """Send one admin email for semantic decisions skipped on this feed."""
+    if not problems:
+        return
+
+    by_type: dict[str, int] = {}
+    for problem in problems:
+        by_type[problem.error_type] = by_type.get(problem.error_type, 0) + 1
+    examples = "\n".join(
+        f"- monitor_id={problem.monitor_id} reddit_id={problem.reddit_id} {problem.error_type}: {problem.message}"
+        for problem in problems[:5]
+    )
+    counts = ", ".join(f"{error_type}={count}" for error_type, count in sorted(by_type.items()))
+    subject = "Chattersift semantic matching skipped decisions"
+    message = (
+        "Semantic matching skipped one or more decisions for a Reddit feed.\n\n"
+        f"Feed: kind={spec.kind} format={spec.format} subreddit={spec.subreddit} "
+        f"query_fingerprint={spec.query_fingerprint or '-'}\n"
+        f"Skipped decisions: {len(problems)}\n"
+        f"Counts: {counts}\n\n"
+        f"Representative errors:\n{examples}"
+    )
+    try:
+        recipients = _admin_email_recipients()
+        if not recipients:
+            return
+        send_mail.delay(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipients,
+        )
+    except Exception as error:  # noqa: BLE001
+        logger.warning(
+            "Failed to send semantic matching admin email; kind=%s format=%s subreddit=%s error=%s",
+            spec.kind,
+            spec.format,
+            spec.subreddit,
+            error,
+            exc_info=True,
+        )
+
+
+def _admin_email_recipients() -> list[str]:
+    """Return admin email recipients from tuple or string-style ADMINS settings."""
+    recipients: list[str] = []
+    for admin in settings.ADMINS:
+        if isinstance(admin, tuple) and len(admin) == ADMIN_TUPLE_LENGTH:
+            recipients.append(admin[1])
+        elif isinstance(admin, str):
+            recipients.extend(email for _, email in getaddresses([admin]) if email)
+    return recipients

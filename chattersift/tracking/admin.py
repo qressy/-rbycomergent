@@ -6,11 +6,11 @@ from .models import Monitor
 
 @admin.register(Monitor)
 class MonitorAdmin(admin.ModelAdmin):
-    """Admin interface for user keyword monitors."""
+    """Admin interface for user Reddit monitors."""
 
-    list_display = ["subreddit", "keyword", "user", "is_active", "created_at", "updated_at"]
-    list_filter = ["is_active", "subreddit", "created_at"]
-    search_fields = ["subreddit", "keyword", "user__email", "user__name"]
+    list_display = ["subreddit", "match_mode", "keyword", "semantic_description", "user", "is_active", "created_at"]
+    list_filter = ["match_mode", "is_active", "subreddit", "created_at"]
+    search_fields = ["subreddit", "keyword", "semantic_description", "user__email", "user__name"]
     autocomplete_fields = ["user"]
     readonly_fields = ["created_at", "updated_at"]
     ordering = ["subreddit", "keyword"]
@@ -20,14 +20,16 @@ class MonitorAdmin(admin.ModelAdmin):
 class MatchAdmin(admin.ModelAdmin):
     """Admin interface for Reddit items matched against monitors."""
 
-    list_display = ["reddit_item_id", "monitor", "occurred_at", "created_at"]
-    list_filter = ["occurred_at", "created_at", "monitor__subreddit"]
+    list_display = ["reddit_item_id", "monitor", "match_mode", "confidence", "occurred_at", "created_at"]
+    list_filter = ["match_mode", "occurred_at", "created_at", "monitor__subreddit"]
     search_fields = [
         "reddit_item_id",
         "title",
         "body",
+        "match_reason",
         "monitor__subreddit",
         "monitor__keyword",
+        "monitor__semantic_description",
         "monitor__user__email",
     ]
     autocomplete_fields = ["monitor"]

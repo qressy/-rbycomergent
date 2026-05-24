@@ -9,7 +9,7 @@
       <section>
         <h2>r/{{ alert.subreddit }}</h2>
         <p>
-          <strong>Keywords:</strong> {{ alert.matched_keywords|join:", " }}
+          <strong>Monitors:</strong> {{ alert.monitor_labels|join:", " }}
         </p>
         {% if alert.title %}<h3>{{ alert.highlighted_title }}</h3>{% endif %}
         <p>{{ alert.highlighted_body }}</p>

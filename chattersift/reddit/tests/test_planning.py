@@ -121,3 +121,25 @@ def test_build_search_query_groups_do_not_include_semantic_intents() -> None:
         RedditFeedKind.COMMENT_SEARCH,
     ]
     assert all(group.query == '"postgres"' for group in groups)
+
+
+def test_keyword_semantic_intents_use_keyword_search_specs() -> None:
+    intents = [
+        MonitorIntent(
+            subreddit="django",
+            keywords=("postgres",),
+            match_mode=MonitorMatchMode.KEYWORD_SEMANTIC,
+            semantic_description="deployment incident reports",
+            monitor_id=1,
+        ),
+    ]
+
+    specs = build_feed_specs_for_monitor_intents(
+        intents,
+        preferred_format=RedditFeedFormat.JSON,
+    )
+
+    assert [(spec.kind, spec.query) for spec in specs] == [
+        (RedditFeedKind.COMMENT_SEARCH, '"postgres"'),
+        (RedditFeedKind.POST_SEARCH, '"postgres"'),
+    ]

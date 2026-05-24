@@ -87,12 +87,14 @@
       </div>
     </div>
   </div>
-  {# Keywords area #}
+  {# Monitors area #}
   <div class="px-5 pb-3">
     <div class="flex flex-wrap items-center gap-2">
       {% for monitor in group.monitors %}
         <div class="group join">
-          <span class="badge badge-primary join-item h-7 px-2.5 text-sm {% if not monitor.is_active %}opacity-50{% endif %}">{{ monitor.keyword }}</span>
+          <span class="badge {% if monitor.match_mode == 'semantic' %}badge-secondary{% elif monitor.match_mode == 'keyword_semantic' %}badge-accent{% else %}badge-primary{% endif %} join-item h-7 px-2.5 text-sm {% if not monitor.is_active %}opacity-50{% endif %}">
+            {{ monitor.label }}
+          </span>
           <form method="post"
                 action="{% url 'tracking:monitor_delete' monitor.pk %}"
                 hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
@@ -103,7 +105,7 @@
             {% csrf_token %}
             <button type="submit"
                     class="btn btn-ghost btn-xs join-item h-7 min-h-7 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="{% blocktranslate with keyword=monitor.keyword %}Remove {{ keyword }}{% endblocktranslate %}">
+                    title="{% blocktranslate with label=monitor.label %}Remove {{ label }}{% endblocktranslate %}">
               <svg xmlns="http://www.w3.org/2000/svg"
                    class="h-3 w-3"
                    fill="none"
@@ -197,7 +199,7 @@
       </select>
     </form>
     <span class="text-xs text-base-content/40">
-      {% blocktranslate count count=group.monitors|length %}{{ count }} keyword{% plural %}{{ count }} keywords{% endblocktranslate %}
+      {% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}
     </span>
   </div>
 </article>

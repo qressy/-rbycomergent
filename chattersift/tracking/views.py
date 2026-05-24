@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
 from chattersift.alerts.models import NotificationCadence
+from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.users.forms import UserProfileForm
 
 from .forms import CadenceForm
@@ -25,7 +26,7 @@ from .services import delete_single_monitor
 from .services import delete_subreddit_group
 from .services import toggle_subreddit_group
 from .services import update_group_cadence
-from .services import upsert_keyword_monitors
+from .services import upsert_monitors
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -51,10 +52,12 @@ def monitor_create(request: HttpRequest) -> HttpResponse:
     form = MonitorBatchForm(request.POST)
     is_valid = form.is_valid()
     if is_valid:
-        upsert_keyword_monitors(
+        upsert_monitors(
             user=request.user,
             subreddit=form.cleaned_data["subreddit"],
+            match_mode=form.cleaned_data["match_mode"],
             keywords=form.cleaned_data["keywords"],
+            semantic_description=form.cleaned_data["semantic_description"],
             cadence=form.cleaned_data["cadence"],
         )
         form = MonitorBatchForm()
@@ -212,6 +215,7 @@ def _dashboard_context(request: HttpRequest, *, form: MonitorBatchForm | None = 
         "show_monitor_form": form.is_bound and bool(form.errors),
         "subreddit_groups": subreddit_groups,
         "cadence_choices": NotificationCadence.choices,
+        "match_mode_choices": MonitorMatchMode.choices,
     }
 
 

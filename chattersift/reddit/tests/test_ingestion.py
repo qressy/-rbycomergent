@@ -3,17 +3,22 @@ from __future__ import annotations
 import logging
 from datetime import UTC
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
 from chattersift.reddit.clients import RedditClient
 from chattersift.reddit.contracts import FetchResult
+from chattersift.reddit.contracts import MatchDecision
+from chattersift.reddit.contracts import MatchRequest
+from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.reddit.contracts import RedditFeedFormat
 from chattersift.reddit.contracts import RedditFeedKind
 from chattersift.reddit.contracts import RedditFeedSpec
 from chattersift.reddit.contracts import RedditItemPayload
 from chattersift.reddit.ingestion import fetch_due_feeds
 from chattersift.reddit.ingestion import fetch_feed_normalize_and_match
+from chattersift.reddit.matching import RedditMatcher
 from chattersift.reddit.models import RedditItem
 from chattersift.reddit.models import SubredditFetchState
 from chattersift.tracking.models import Match
@@ -21,6 +26,7 @@ from chattersift.tracking.models import Monitor
 from chattersift.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
+SEMANTIC_TEST_CONFIDENCE = 0.9
 
 
 class FakeRedditClient(RedditClient):
@@ -38,6 +44,28 @@ class FailingRedditClient(RedditClient):
 
     def fetch_feed(self, spec: RedditFeedSpec) -> list[RedditItemPayload]:
         msg = "reddit unavailable"
+        raise RuntimeError(msg)
+
+
+class MatchingSemanticMatcher(RedditMatcher):
+    """Semantic test matcher that always approves the request."""
+
+    def evaluate(self, request: MatchRequest) -> MatchDecision:
+        return MatchDecision(
+            monitor_id=request.intent.monitor_id or 0,
+            reddit_id=request.item.reddit_id,
+            matched=True,
+            confidence=SEMANTIC_TEST_CONFIDENCE,
+            match_mode=request.intent.match_mode,
+            reason="semantic:test_match",
+        )
+
+
+class FailingSemanticMatcher(RedditMatcher):
+    """Semantic test matcher that exercises fail-closed ingestion."""
+
+    def evaluate(self, request: MatchRequest) -> MatchDecision:
+        msg = "provider unavailable"
         raise RuntimeError(msg)
 
 
@@ -196,6 +224,86 @@ def test_fetch_feed_normalize_and_match_does_not_match_comment_context_title() -
     assert result.matched_count == 0
     assert RedditItem.objects.filter(reddit_id="t1_context_only").exists()
     assert not Match.objects.filter(reddit_item_id="t1_context_only").exists()
+
+
+def test_keyword_semantic_persists_semantic_match_metadata() -> None:
+    user = UserFactory()
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode=MonitorMatchMode.KEYWORD_SEMANTIC,
+        keyword="postgres",
+        semantic_description="database outage reports",
+        semantic_fingerprint="semantic",
+    )
+    payload = RedditItemPayload(
+        reddit_id="t3_refined",
+        item_type=RedditItem.RedditItemType.POST,
+        subreddit="django",
+        permalink="https://www.reddit.com/r/django/comments/refined/example/",
+        occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
+        title="Postgres outage",
+        body="A Django deployment hit database problems.",
+    )
+    spec = RedditFeedSpec(
+        kind=RedditFeedKind.POST_SEARCH,
+        format=RedditFeedFormat.JSON,
+        subreddit="django",
+        query='"postgres"',
+        query_fingerprint="semantic",
+    )
+
+    result = fetch_feed_normalize_and_match(
+        spec,
+        client=FakeRedditClient([payload]),
+        semantic_matcher=MatchingSemanticMatcher(),
+    )
+
+    match = Match.objects.get(monitor=monitor, reddit_item_id="t3_refined")
+    assert result.matched_count == 1
+    assert match.match_mode == MonitorMatchMode.KEYWORD_SEMANTIC
+    assert match.confidence == SEMANTIC_TEST_CONFIDENCE
+    assert match.match_reason == "semantic:test_match"
+
+
+def test_semantic_errors_do_not_fail_feed_and_enqueue_one_admin_email() -> None:
+    user = UserFactory()
+    Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode=MonitorMatchMode.SEMANTIC,
+        keyword="",
+        semantic_description="database outage reports",
+        semantic_fingerprint="semantic",
+    )
+    payload = RedditItemPayload(
+        reddit_id="t3_error",
+        item_type=RedditItem.RedditItemType.POST,
+        subreddit="django",
+        permalink="https://www.reddit.com/r/django/comments/error/example/",
+        occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
+        title="Postgres outage",
+    )
+    spec = RedditFeedSpec(
+        kind=RedditFeedKind.POST_STREAM,
+        format=RedditFeedFormat.JSON,
+        subreddit="django",
+    )
+
+    with patch("chattersift.reddit.ingestion.send_mail.delay") as send_mail_delay:
+        result = fetch_feed_normalize_and_match(
+            spec,
+            client=FakeRedditClient([payload]),
+            semantic_matcher=FailingSemanticMatcher(),
+        )
+
+    assert result.matched_count == 0
+    assert not Match.objects.exists()
+    send_mail_delay.assert_called_once()
+    assert send_mail_delay.call_args.kwargs["subject"] == "Chattersift semantic matching skipped decisions"
+    assert send_mail_delay.call_args.kwargs["from_email"]
+    assert send_mail_delay.call_args.kwargs["recipient_list"]
+    assert "provider unavailable" in send_mail_delay.call_args.kwargs["message"]
 
 
 def test_fetch_feed_normalize_and_match_records_failure_state() -> None:

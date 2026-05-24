@@ -1,3 +1,5 @@
+{% load widget_tweaks %}
+
 {% for field in attrs.form %}
   {% if field.errors %}
     {% for error in field.errors %}<div class="text-error text-sm mb-2">{{ error }}</div>{% endfor %}
@@ -9,13 +11,19 @@
       {% if field.field.widget.input_type == "checkbox" %}
         <label class="flex items-center gap-3 cursor-pointer"
                for="{{ field.id_for_label }}">
-          {{ field }}
+          {% render_field field class+="checkbox checkbox-primary" %}
           <span class="text-sm text-base-content">{{ field.label }}</span>
         </label>
       {% else %}
         <label class="block text-sm font-medium text-base-content mb-2"
                for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
+        {% if field|widget_type == "textarea" %}
+          {% render_field field class+="textarea textarea-bordered border-base-300 w-full bg-base-100 focus:border-primary focus:outline-none" %}
+        {% elif field|widget_type == "select" %}
+          {% render_field field class+="select select-bordered border-base-300 w-full bg-base-100 focus:border-primary focus:outline-none" %}
+        {% else %}
+          {% render_field field class+="input w-full border border-base-300 bg-base-100 focus:border-primary focus:outline-none" %}
+        {% endif %}
       {% endif %}
       {% if field.help_text %}<div class="text-xs text-base-content/50 mt-2">{{ field.help_text }}</div>{% endif %}
     </div>

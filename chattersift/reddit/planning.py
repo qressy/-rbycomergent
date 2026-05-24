@@ -30,14 +30,22 @@ def build_monitor_intents_for_active_monitors() -> list[MonitorIntent]:
     for monitor in active_monitors:
         subreddit = normalize_subreddit(monitor.subreddit)
         keyword = normalize_keyword(monitor.keyword)
-        if not subreddit or not keyword:
+        semantic_description = normalize_keyword(monitor.semantic_description)
+        if not subreddit:
+            continue
+        if monitor.match_mode == MonitorMatchMode.KEYWORD and not keyword:
+            continue
+        if monitor.match_mode == MonitorMatchMode.SEMANTIC and not semantic_description:
+            continue
+        if monitor.match_mode == MonitorMatchMode.KEYWORD_SEMANTIC and (not keyword or not semantic_description):
             continue
 
         intents.append(
             MonitorIntent(
                 subreddit=subreddit,
-                keywords=(keyword,),
-                match_mode=MonitorMatchMode.KEYWORD,
+                keywords=(keyword,) if keyword else (),
+                match_mode=MonitorMatchMode(monitor.match_mode),
+                semantic_description=semantic_description,
                 monitor_id=monitor.pk,
                 user_id=monitor.user_id,
             ),
@@ -70,7 +78,7 @@ def build_search_query_groups_for_monitor_intents(
     grouped_keywords: dict[str, set[str]] = {}  # subreddit -> keywords
 
     for intent in intents:
-        if intent.match_mode != MonitorMatchMode.KEYWORD:
+        if intent.match_mode not in {MonitorMatchMode.KEYWORD, MonitorMatchMode.KEYWORD_SEMANTIC}:
             continue
 
         subreddit = normalize_subreddit(intent.subreddit)
@@ -233,7 +241,10 @@ def _stream_requirements(
         if intent.match_mode == MonitorMatchMode.SEMANTIC:
             needs_post_stream = True
             needs_comment_stream = True
-        elif intent.match_mode == MonitorMatchMode.KEYWORD and feed_format.value == "rss":
+        elif (
+            intent.match_mode in {MonitorMatchMode.KEYWORD, MonitorMatchMode.KEYWORD_SEMANTIC}
+            and feed_format.value == "rss"
+        ):
             needs_comment_stream = True
 
         requirements[subreddit] = (needs_post_stream, needs_comment_stream)

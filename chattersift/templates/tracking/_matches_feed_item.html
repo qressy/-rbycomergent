@@ -6,7 +6,7 @@
       <div class="flex flex-wrap gap-2">
         <span class="badge badge-primary badge-outline">r/{{ item.subreddit }}</span>
         <span class="badge badge-info badge-outline">{{ item.item_type_label }}</span>
-        {% for keyword in item.keywords %}<span class="badge badge-accent badge-outline">{{ keyword }}</span>{% endfor %}
+        {% for label in item.monitor_labels %}<span class="badge badge-accent badge-outline">{{ label }}</span>{% endfor %}
       </div>
       <a class="link link-primary font-semibold break-words"
          href="{{ item.permalink }}"

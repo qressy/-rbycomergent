@@ -18,6 +18,7 @@ from django.utils.html import conditional_escape
 from django.utils.safestring import SafeString
 from django.utils.safestring import mark_safe
 
+from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.tracking.models import Match
 
 from .models import EmailMatchDelivery
@@ -48,6 +49,7 @@ class UserMatchAlert:
     subreddit: str
     reddit_item_id: str
     matched_keywords: tuple[str, ...]
+    monitor_labels: tuple[str, ...]
     match_ids: tuple[int, ...]
     monitor_ids: tuple[int, ...]
     title: str
@@ -64,6 +66,7 @@ class RenderedUserMatchAlert:
     subreddit: str
     reddit_item_id: str
     matched_keywords: tuple[str, ...]
+    monitor_labels: tuple[str, ...]
     match_ids: tuple[int, ...]
     monitor_ids: tuple[int, ...]
     title: str
@@ -168,6 +171,7 @@ def build_user_match_alerts(matches: Iterable[Match]) -> list[UserMatchAlert]:
                 subreddit=subreddit_labels[key],
                 reddit_item_id=key[2],
                 matched_keywords=_matched_keywords(grouped),
+                monitor_labels=_monitor_labels(grouped),
                 match_ids=tuple(
                     sorted(match.pk for match in grouped if match.pk is not None),
                 ),
@@ -193,10 +197,22 @@ def _matched_keywords(matches: Iterable[Match]) -> tuple[str, ...]:
     """Return display keywords deduplicated case-insensitively."""
     keywords_by_key: dict[str, str] = {}
     for match in matches:
+        if match.monitor.match_mode == MonitorMatchMode.SEMANTIC or not match.monitor.keyword:
+            continue
         keyword = match.monitor.keyword
         keywords_by_key.setdefault(keyword.casefold(), keyword)
 
     return tuple(sorted(keywords_by_key.values(), key=str.casefold))
+
+
+def _monitor_labels(matches: Iterable[Match]) -> tuple[str, ...]:
+    """Return monitor labels deduplicated case-insensitively."""
+    labels_by_key: dict[str, str] = {}
+    for match in matches:
+        label = match.monitor.label
+        if label:
+            labels_by_key.setdefault(label.casefold(), label)
+    return tuple(sorted(labels_by_key.values(), key=str.casefold))
 
 
 def render_user_match_alerts(alerts: Iterable[UserMatchAlert]) -> list[RenderedUserMatchAlert]:
@@ -208,6 +224,7 @@ def render_user_match_alerts(alerts: Iterable[UserMatchAlert]) -> list[RenderedU
             subreddit=alert.subreddit,
             reddit_item_id=alert.reddit_item_id,
             matched_keywords=alert.matched_keywords,
+            monitor_labels=alert.monitor_labels,
             match_ids=alert.match_ids,
             monitor_ids=alert.monitor_ids,
             title=alert.title,

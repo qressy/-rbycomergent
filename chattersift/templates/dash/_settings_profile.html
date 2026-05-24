@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load widget_tweaks %}
 
 <div id="settings-profile">
   <form method="post"
@@ -12,12 +13,7 @@
       <label class="label" for="id_name">
         <span class="label-text">{% translate "Display name" %}</span>
       </label>
-      <input id="id_name"
-             name="name"
-             type="text"
-             maxlength="255"
-             value="{{ profile_form.name.value|default_if_none:'' }}"
-             class="input input-bordered w-full max-w-sm" />
+      {% render_field profile_form.name class+="input input-bordered w-full max-w-sm" %}
       {% if profile_form.name.errors %}
         <p class="text-sm text-error">{{ profile_form.name.errors|join:", " }}</p>
       {% endif %}

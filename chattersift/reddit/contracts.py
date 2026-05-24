@@ -55,6 +55,7 @@ class MonitorMatchMode(models.TextChoices):
 
     KEYWORD = "keyword", "Keyword"
     SEMANTIC = "semantic", "Semantic"
+    KEYWORD_SEMANTIC = "keyword_semantic", "Keyword + semantic"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -192,8 +193,9 @@ class MatchDecision:
         monitor_id: Monitor primary key that should receive a Match row.
         reddit_id: Reddit item identifier being evaluated.
         matched: Whether the item satisfies the monitor intent.
-        confidence: Optional matcher confidence from 0.0 to 1.0. Keyword
+    confidence: Optional matcher confidence from 0.0 to 1.0. Keyword
             matching can return 1.0 for exact deterministic matches.
+        match_mode: Matching strategy that produced this decision.
         reason: Short diagnostic reason suitable for logs/admin views, not a
             user-facing explanation contract.
     """
@@ -202,6 +204,7 @@ class MatchDecision:
     reddit_id: str
     matched: bool
     confidence: float | None = None
+    match_mode: MonitorMatchMode = MonitorMatchMode.KEYWORD
     reason: str = ""
 
 

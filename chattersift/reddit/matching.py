@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import json
+import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from django.conf import settings
+from litellm import completion
 
 from .contracts import MatchDecision
 from .contracts import MatchRequest
@@ -11,6 +17,32 @@ if TYPE_CHECKING:
 
     from .contracts import MonitorIntent
     from .contracts import RedditItemPayload
+
+logger = logging.getLogger(__name__)
+
+
+class SemanticMatchError(RuntimeError):
+    """Raised when a semantic decision cannot be completed safely."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class SemanticEvaluationProblem:
+    """Diagnostic for a semantic decision skipped during ingestion."""
+
+    monitor_id: int
+    reddit_id: str
+    error_type: str
+    message: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class SemanticEvaluationContext:
+    """Shared semantic evaluator state for one feed pass."""
+
+    decisions: list[MatchDecision]
+    semantic_evaluator: RedditMatcher
+    problem_collector: list[SemanticEvaluationProblem] | None
+    max_semantic_calls: int
 
 
 class RedditMatcher:
@@ -52,6 +84,7 @@ class KeywordRedditMatcher(RedditMatcher):
             reddit_id=request.item.reddit_id,
             matched=matched,
             confidence=1.0 if matched else 0.0,
+            match_mode=MonitorMatchMode.KEYWORD,
             reason=f"keyword:{matched_keyword}" if matched else "keyword:not_found",
         )
 
@@ -67,8 +100,75 @@ class SemanticRedditMatcher(RedditMatcher):
 
     def evaluate(self, request: MatchRequest) -> MatchDecision:
         """Return whether the item semantically satisfies the monitor intent."""
-        msg = "Configure a concrete semantic Reddit matcher before evaluating semantic requests."
-        raise NotImplementedError(msg)
+        monitor_id = request.intent.monitor_id
+        if monitor_id is None:
+            missing_monitor_id = "Match requests must include a persisted monitor id."
+            raise ValueError(missing_monitor_id)
+        if not settings.CHATTERSIFT_SEMANTIC_LLM_MODEL:
+            missing_model = "CHATTERSIFT_SEMANTIC_LLM_MODEL is required for semantic matching."
+            raise SemanticMatchError(missing_model)
+
+        text = _semantic_searchable_text(request.item)
+        if not text.strip():
+            return MatchDecision(
+                monitor_id=monitor_id,
+                reddit_id=request.item.reddit_id,
+                matched=False,
+                confidence=0.0,
+                match_mode=request.intent.match_mode,
+                reason="semantic:no_text",
+            )
+
+        try:
+            response = completion(
+                model=settings.CHATTERSIFT_SEMANTIC_LLM_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You decide whether Reddit content matches a user's monitoring intent. "
+                            "Return only JSON with keys matched, confidence, and reason."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Monitoring intent:\n{request.intent.semantic_description}\n\n"
+                            f"Reddit content:\n{_truncate_text(text)}"
+                        ),
+                    },
+                ],
+                response_format={"type": "json_object"},
+                temperature=0,
+                max_tokens=settings.CHATTERSIFT_SEMANTIC_LLM_MAX_TOKENS,
+                timeout=settings.CHATTERSIFT_SEMANTIC_LLM_TIMEOUT_SECONDS,
+                api_base=settings.CHATTERSIFT_SEMANTIC_LLM_BASE_URL or None,
+                api_key=settings.CHATTERSIFT_SEMANTIC_LLM_API_KEY or None,
+            )
+        except Exception as error:
+            raise SemanticMatchError(str(error)) from error
+
+        content = _completion_content(response)
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as error:
+            invalid_json = "Semantic matcher returned invalid JSON."
+            raise SemanticMatchError(invalid_json) from error
+
+        if not isinstance(parsed, dict) or not isinstance(parsed.get("matched"), bool):
+            invalid_shape = "Semantic matcher returned an invalid decision shape."
+            raise SemanticMatchError(invalid_shape)
+
+        confidence = _bounded_confidence(parsed.get("confidence"))
+        reason = str(parsed.get("reason") or "semantic:decision")[:500]
+        return MatchDecision(
+            monitor_id=monitor_id,
+            reddit_id=request.item.reddit_id,
+            matched=parsed["matched"],
+            confidence=confidence,
+            match_mode=request.intent.match_mode,
+            reason=reason,
+        )
 
 
 def build_match_requests(
@@ -104,6 +204,8 @@ def evaluate_match_requests(
     *,
     keyword_matcher: RedditMatcher | None = None,
     semantic_matcher: RedditMatcher | None = None,
+    semantic_problem_collector: list[SemanticEvaluationProblem] | None = None,
+    semantic_max_calls: int | None = None,
 ) -> list[MatchDecision]:
     """Evaluate match requests with the appropriate matching strategy.
 
@@ -116,13 +218,46 @@ def evaluate_match_requests(
     """
     keyword_evaluator = keyword_matcher or KeywordRedditMatcher()
     semantic_evaluator = semantic_matcher or SemanticRedditMatcher()
+    max_semantic_calls = (
+        settings.CHATTERSIFT_SEMANTIC_MATCH_MAX_CALLS_PER_FEED if semantic_max_calls is None else semantic_max_calls
+    )
+    semantic_call_count = 0
 
     decisions: list[MatchDecision] = []
+    semantic_context = SemanticEvaluationContext(
+        decisions=decisions,
+        semantic_evaluator=semantic_evaluator,
+        problem_collector=semantic_problem_collector,
+        max_semantic_calls=max_semantic_calls,
+    )
     for request in requests:
         if request.intent.match_mode == MonitorMatchMode.KEYWORD:
             decisions.append(keyword_evaluator.evaluate(request))
         elif request.intent.match_mode == MonitorMatchMode.SEMANTIC:
-            decisions.append(semantic_evaluator.evaluate(request))
+            semantic_call_count = _evaluate_semantic_request(
+                request,
+                context=semantic_context,
+                semantic_call_count=semantic_call_count,
+            )
+        elif request.intent.match_mode == MonitorMatchMode.KEYWORD_SEMANTIC:
+            keyword_decision = keyword_evaluator.evaluate(request)
+            if not keyword_decision.matched:
+                decisions.append(
+                    MatchDecision(
+                        monitor_id=keyword_decision.monitor_id,
+                        reddit_id=keyword_decision.reddit_id,
+                        matched=False,
+                        confidence=0.0,
+                        match_mode=MonitorMatchMode.KEYWORD_SEMANTIC,
+                        reason="keyword_semantic:keyword_not_found",
+                    ),
+                )
+                continue
+            semantic_call_count = _evaluate_semantic_request(
+                request,
+                context=semantic_context,
+                semantic_call_count=semantic_call_count,
+            )
 
     return decisions
 
@@ -132,3 +267,116 @@ def _keyword_searchable_text(item: RedditItemPayload) -> str:
     if item.item_type == "comment":
         return item.body.casefold()
     return f"{item.title}\n{item.body}".casefold()
+
+
+def _evaluate_semantic_request(
+    request: MatchRequest,
+    *,
+    context: SemanticEvaluationContext,
+    semantic_call_count: int,
+) -> int:
+    """Evaluate one semantic request, recording diagnostics instead of raising."""
+    monitor_id = request.intent.monitor_id
+    if monitor_id is None:
+        return semantic_call_count
+    if semantic_call_count >= context.max_semantic_calls:
+        _record_semantic_problem(
+            context.problem_collector,
+            monitor_id=monitor_id,
+            reddit_id=request.item.reddit_id,
+            error_type="budget_exhausted",
+            message="Semantic match call budget exhausted for this feed.",
+        )
+        return semantic_call_count
+
+    try:
+        context.decisions.append(context.semantic_evaluator.evaluate(request))
+        return semantic_call_count + 1
+    except Exception as error:  # noqa: BLE001
+        logger.warning(
+            "Semantic Reddit match failed; monitor_id=%s reddit_id=%s error_type=%s error=%s",
+            monitor_id,
+            request.item.reddit_id,
+            error.__class__.__name__,
+            error,
+            exc_info=True,
+        )
+        _record_semantic_problem(
+            context.problem_collector,
+            monitor_id=monitor_id,
+            reddit_id=request.item.reddit_id,
+            error_type=error.__class__.__name__,
+            message=str(error),
+        )
+        return semantic_call_count + 1
+
+
+def _record_semantic_problem(
+    problem_collector: list[SemanticEvaluationProblem] | None,
+    *,
+    monitor_id: int,
+    reddit_id: str,
+    error_type: str,
+    message: str,
+) -> None:
+    """Append a semantic diagnostic when the caller wants feed-level reporting."""
+    if problem_collector is None:
+        return
+    problem_collector.append(
+        SemanticEvaluationProblem(
+            monitor_id=monitor_id,
+            reddit_id=reddit_id,
+            error_type=error_type,
+            message=message[:1000],
+        ),
+    )
+
+
+def _semantic_searchable_text(item: RedditItemPayload) -> str:
+    """Return item content supplied to semantic matching."""
+    if item.item_type == "comment":
+        return item.body
+    return f"Title: {item.title}\n\nBody: {item.body}"
+
+
+def _truncate_text(value: str) -> str:
+    """Bound semantic matcher input to configured character limits."""
+    max_chars = settings.CHATTERSIFT_SEMANTIC_MATCH_MAX_INPUT_CHARS
+    if len(value) <= max_chars:
+        return value
+    return value[:max_chars].rstrip()
+
+
+def _completion_content(response) -> str:
+    """Extract JSON text from a LiteLLM completion response."""
+    if isinstance(response, dict):
+        try:
+            content = response["choices"][0]["message"]["content"]
+        except (IndexError, KeyError, TypeError) as error:
+            no_content = "Semantic matcher returned no content."
+            raise SemanticMatchError(no_content) from error
+        if not isinstance(content, str):
+            non_text_content = "Semantic matcher returned non-text content."
+            raise SemanticMatchError(non_text_content)
+        return content
+
+    try:
+        content = response.choices[0].message.content
+    except (AttributeError, IndexError, KeyError, TypeError) as error:
+        no_content = "Semantic matcher returned no content."
+        raise SemanticMatchError(no_content) from error
+    if not isinstance(content, str):
+        non_text_content = "Semantic matcher returned non-text content."
+        raise SemanticMatchError(non_text_content)
+    return content
+
+
+def _bounded_confidence(value: object) -> float | None:
+    """Coerce model confidence to the persisted 0.0-1.0 range."""
+    if value is None or not isinstance(value, int | float | str):
+        return None
+    try:
+        confidence = float(value)
+    except TypeError, ValueError:
+        return None
+    return max(0.0, min(confidence, 1.0))

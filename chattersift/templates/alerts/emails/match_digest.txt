@@ -2,7 +2,7 @@ New Reddit matches
 
 {% for alert in alerts %}
 r/{{ alert.subreddit }}
-Keywords: {{ alert.matched_keywords|join:", " }}
+Monitors: {{ alert.monitor_labels|join:", " }}
 {% if alert.title %}{{ alert.title }}
 {% endif %}{{ alert.body }}
 {{ alert.permalink }}
