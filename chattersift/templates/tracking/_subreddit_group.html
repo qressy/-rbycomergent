@@ -91,8 +91,8 @@
   <div class="px-5 pb-3">
     <div class="flex flex-wrap items-center gap-2">
       {% for monitor in group.monitors %}
-        <div class="group join">
-          <span class="badge {% if monitor.match_mode == 'semantic' %}badge-secondary{% elif monitor.match_mode == 'keyword_semantic' %}badge-accent{% else %}badge-primary{% endif %} join-item h-7 px-2.5 text-sm {% if not monitor.is_active %}opacity-50{% endif %}">
+        <div class="inline-flex items-stretch h-7 rounded-md overflow-hidden border border-base-300 {% if not monitor.is_active %}opacity-50{% endif %}">
+          <span class="inline-flex items-center px-2.5 text-sm font-semibold leading-none {% if monitor.match_mode == 'semantic' %}bg-secondary text-secondary-content{% elif monitor.match_mode == 'keyword_semantic' %}bg-accent text-accent-content{% else %}bg-primary text-primary-content{% endif %}">
             {{ monitor.label }}
           </span>
           <form method="post"
@@ -101,10 +101,10 @@
                 hx-target="#dashboard-content"
                 hx-swap="outerHTML"
                 hx-indicator="#global-loading"
-                class="inline">
+                class="inline-flex">
             {% csrf_token %}
             <button type="submit"
-                    class="btn btn-ghost btn-xs join-item h-7 min-h-7 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    class="inline-flex items-center justify-center w-6 bg-base-100 text-base-content/60 hover:bg-error hover:text-error-content transition-colors hover:cursor-pointer"
                     title="{% blocktranslate with label=monitor.label %}Remove {{ label }}{% endblocktranslate %}">
               <svg xmlns="http://www.w3.org/2000/svg"
                    class="h-3 w-3"
@@ -119,7 +119,7 @@
         </div>
       {% endfor %}
       {# Inline add keyword #}
-      <button class="btn btn-ghost btn-xs h-7 min-h-7 gap-1 text-base-content/50 hover:text-base-content"
+      <button class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-dashed border-base-300 text-xs font-medium text-base-content/50 hover:text-base-content hover:border-base-content/40 transition-colors hover:cursor-pointer"
               x-show="!addingKeyword"
               @click="addingKeyword = true; $nextTick(() => $refs.keywordInput.focus())">
         <svg xmlns="http://www.w3.org/2000/svg"
@@ -178,9 +178,9 @@
           class="flex items-center gap-2"
           x-data>
       {% csrf_token %}
-      <label class="text-xs text-base-content/60 font-medium whitespace-nowrap">
+      <label class="text-sm text-base-content/60 font-medium whitespace-nowrap">
         <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-3.5 w-3.5 inline-block mr-0.5 -mt-0.5"
+             class="h-4 w-4 inline-block mr-0.5 -mt-0.5"
              fill="none"
              viewBox="0 0 24 24"
              stroke="currentColor"
@@ -190,7 +190,7 @@
         {% translate "Notify" %}
       </label>
       <select name="cadence"
-              class="select select-bordered select-xs h-7 min-h-7 text-xs"
+              class="select select-bordered select-xs"
               @change="$el.closest('form').requestSubmit()">
         {% for value, label in cadence_choices %}
           <option value="{{ value }}"
