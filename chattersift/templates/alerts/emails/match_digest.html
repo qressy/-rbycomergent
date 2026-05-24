@@ -1,22 +1,48 @@
+{# djlint:off H021 #}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <title>New Reddit matches</title>
   </head>
-  <body>
-    <h1>New Reddit matches</h1>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               color: #1a1a1b;
+               max-width: 640px;
+               margin: 0 auto;
+               padding: 16px">
+    <h1 style="font-size: 20px; margin: 0 0 16px;">New Reddit matches</h1>
     {% for alert in alerts %}
+      {% if not forloop.first %}<hr style="border: 0; border-top: 1px solid #d7dadc; margin: 24px 0;" />{% endif %}
       <section>
-        <h2>r/{{ alert.subreddit }}</h2>
-        <p>
+        <p style="margin: 0 0 8px;">
+          <span style="display: inline-block;
+                       padding: 2px 8px;
+                       border-radius: 10px;
+                       background: {% if alert.reddit_item_id|slice:':3' == 't3_' %}#0079d3{% else %}#46d160{% endif %};
+                       color: #fff;
+                       font-size: 12px;
+                       font-weight: 600;
+                       text-transform: uppercase;
+                       letter-spacing: 0.4px">
+            {% if alert.reddit_item_id|slice:":3" == "t3_" %}
+              Post
+            {% else %}
+              Comment
+            {% endif %}
+          </span>
+          <span style="margin-left: 8px; color: #7c7c7c; font-size: 13px;">r/{{ alert.subreddit }}</span>
+        </p>
+        <p style="margin: 0 0 12px; font-size: 13px; color: #1a1a1b;">
           <strong>Monitors:</strong> {{ alert.monitor_labels|join:", " }}
         </p>
-        {% if alert.title %}<h3>{{ alert.highlighted_title }}</h3>{% endif %}
-        <p>{{ alert.highlighted_body }}</p>
-        <p>
-          <a href="{{ alert.permalink }}">Open on Reddit</a>
+        {% if alert.title %}<h3 style="margin: 0 0 8px; font-size: 16px;">{{ alert.highlighted_title }}</h3>{% endif %}
+        <p style="margin: 0 0 12px; line-height: 1.5;">{{ alert.highlighted_body }}</p>
+        <p style="margin: 0;">
+          <a href="{{ alert.permalink }}"
+             style="color: #0079d3;
+                    text-decoration: none">Open on Reddit →</a>
         </p>
       </section>
     {% endfor %}
   </body>
 </html>
+{# djlint:on #}
