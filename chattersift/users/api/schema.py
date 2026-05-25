@@ -5,18 +5,12 @@ from ninja import ModelSchema
 User = get_user_model()
 
 
-class UpdateUserSchema(ModelSchema):
-    class Meta:
-        model = User
-        fields = ["name"]
-
-
 class UserSchema(ModelSchema):
     url: str
 
     class Meta:
         model = User
-        fields = ["email", "name"]
+        fields = ["email"]
 
     @staticmethod
     def resolve_url(obj: User):

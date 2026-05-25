@@ -15,5 +15,4 @@ urlpatterns = [
     path("dash/monitors/<str:subreddit>/cadence/", views.monitor_update_cadence, name="monitor_update_cadence"),
     path("dash/matches/", views.matches, name="matches"),
     path("dash/settings/", views.dashboard_settings, name="dashboard_settings"),
-    path("dash/settings/profile/", views.dashboard_settings_profile, name="dashboard_settings_profile"),
 ]

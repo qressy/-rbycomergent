@@ -150,7 +150,9 @@ def test_settings_page_does_not_show_notifications_section(client, user) -> None
 
     content = response.content.decode()
     assert "Notifications" not in content
-    assert "Manage your profile and account." in content
+    assert "Profile" not in content
+    assert "Display name" not in content
+    assert "Manage your account." in content
 
 
 def test_dashboard_does_not_show_match_content(client, user) -> None:

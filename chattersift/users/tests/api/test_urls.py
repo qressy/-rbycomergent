@@ -20,8 +20,3 @@ def test_user_list():
 def test_current_user():
     assert reverse("api:retrieve_current_user") == "/api/users/me/"
     assert resolve("/api/users/me/").view_name == "api:retrieve_current_user"
-
-
-def test_update_user():
-    assert reverse("api:update_user", kwargs={"pk": 123}) == "/api/users/123/"
-    assert resolve("/api/users/123/").view_name == "api:retrieve_user"

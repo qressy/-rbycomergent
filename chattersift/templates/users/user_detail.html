@@ -3,11 +3,11 @@
 {% load static i18n %}
 
 {% block title %}
-  {{ object.name|default:object.email }}
+  {{ object.email }}
 {% endblock title %}
 {% block content %}
   <div class="space-y-4">
-    <h2 class="text-2xl font-bold">{{ object.name|default:object.email }}</h2>
+    <h2 class="text-2xl font-bold">{{ object.email }}</h2>
     {% if object == request.user %}
       <a class="btn btn-primary btn-sm"
          href="{% url 'tracking:dashboard_settings' %}">{% translate "Go to Settings" %}</a>

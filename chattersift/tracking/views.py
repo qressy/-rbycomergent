@@ -13,7 +13,6 @@ from django.views.decorators.http import require_POST
 
 from chattersift.alerts.models import NotificationCadence
 from chattersift.reddit.contracts import MonitorMatchMode
-from chattersift.users.forms import UserProfileForm
 
 from .forms import CadenceForm
 from .forms import KeywordAddForm
@@ -173,37 +172,12 @@ def matches(request: HttpRequest) -> HttpResponse:
 def dashboard_settings(request: HttpRequest) -> HttpResponse:
     """Renders the consolidated dashboard settings page."""
 
-    profile_form = UserProfileForm(instance=request.user)
-
     context = {
         "dash_active_nav": "settings",
-        "profile_form": profile_form,
     }
     if request.headers.get("HX-Request"):
         return render(request, "dash/_settings_content.html", context)
     return render(request, "dash/settings.html", context)
-
-
-@login_required
-@require_POST
-def dashboard_settings_profile(request: HttpRequest) -> HttpResponse:
-    """Handles profile name update, returns HTMX partial."""
-
-    form = UserProfileForm(request.POST, instance=request.user)
-    saved = False
-    if form.is_valid():
-        form.save()
-        saved = True
-
-    html = render_to_string(
-        "dash/_settings_profile.html",
-        {
-            "profile_form": form,
-            "profile_saved": saved,
-        },
-        request=request,
-    )
-    return HttpResponse(html)
 
 
 def _dashboard_context(request: HttpRequest, *, form: MonitorBatchForm | None = None) -> dict[str, object]:
