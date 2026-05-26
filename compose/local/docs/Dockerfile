@@ -1,5 +1,5 @@
 # define an alias for the specific python version used in this file.
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS python
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS python
 
 
 # Python build stage
@@ -8,15 +8,6 @@ FROM python AS python-build-stage
 ARG APP_HOME=/app
 
 WORKDIR ${APP_HOME}
-
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg dependencies
-  libpq-dev \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
 
 # Requirements are installed here to ensure they will be cached.
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -40,8 +31,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # To run the Makefile
   make \
-  # psycopg dependencies
-  libpq-dev \
   # Translations dependencies
   gettext \
   # Uncomment below lines to enable Sphinx output to latex and pdf

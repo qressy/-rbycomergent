@@ -1,5 +1,5 @@
 
-FROM node:22-bookworm-slim AS node-build-stage
+FROM node:24-trixie-slim AS node-build-stage
 
 ARG APP_HOME=/app
 
@@ -12,21 +12,13 @@ RUN npm run build:css
 
 
 # define an alias for the specific python version used in this file.
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS python-build-stage
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS python-build-stage
 
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 
 ARG APP_HOME=/app
 
 WORKDIR ${APP_HOME}
-
-# Install apt packages
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg dependencies
-  libpq-dev
-
 
 # Requirements are installed here to ensure they will be cached.
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -43,7 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
 # Python 'run' stage
-FROM python:3.14-slim-bookworm AS python-run-stage
+FROM python:3.14-slim-trixie AS python-run-stage
 
 ARG APP_HOME=/app
 
@@ -55,8 +47,6 @@ RUN addgroup --system django \
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg dependencies
-  libpq-dev \
   # Translations dependencies
   gettext \
   # entrypoint
