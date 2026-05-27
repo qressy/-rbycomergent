@@ -3,8 +3,8 @@ New Reddit matches
 {% for alert in alerts %}{% if not forloop.first %}----------------------------------------
 {% endif %}[{% if alert.reddit_item_id|slice:":3" == "t3_" %}POST{% else %}COMMENT{% endif %}] r/{{ alert.subreddit }}
 Monitors: {{ alert.monitor_labels|join:", " }}
-{% if alert.title %}{{ alert.title }}
-{% endif %}{{ alert.body }}
+{% if alert.title_snippet %}{{ alert.title_snippet }}
+{% endif %}{{ alert.body_snippet }}
 {{ alert.permalink }}
 
 {% endfor %}

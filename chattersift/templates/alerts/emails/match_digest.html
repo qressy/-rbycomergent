@@ -34,8 +34,10 @@
         <p style="margin: 0 0 12px; font-size: 13px; color: #1a1a1b;">
           <strong>Monitors:</strong> {{ alert.monitor_labels|join:", " }}
         </p>
-        {% if alert.title %}<h3 style="margin: 0 0 8px; font-size: 16px;">{{ alert.highlighted_title }}</h3>{% endif %}
-        <p style="margin: 0 0 12px; line-height: 1.5;">{{ alert.highlighted_body }}</p>
+        {% if alert.title_snippet %}
+          <h3 style="margin: 0 0 8px; font-size: 16px;">{{ alert.highlighted_title_snippet }}</h3>
+        {% endif %}
+        <p style="margin: 0 0 12px; line-height: 1.5;">{{ alert.highlighted_body_snippet }}</p>
         <p style="margin: 0;">
           <a href="{{ alert.permalink }}"
              style="color: #0079d3;

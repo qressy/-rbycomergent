@@ -13,11 +13,10 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
-from django.utils.html import format_html
-from django.utils.html import format_html_join
 
 from chattersift.alerts.models import NotificationCadence
 from chattersift.alerts.schedules import ensure_email_delivery_state
+from chattersift.core.text_snippets import highlighted_snippet
 from chattersift.reddit.contracts import MonitorMatchMode
 
 from .models import Match
@@ -541,8 +540,8 @@ def _build_matches_feed_item(matches: list[Match]) -> MatchesFeedItem:
         occurred_at=first_match.occurred_at,
         keywords=keywords,
         monitor_labels=monitor_labels,
-        title_html=_highlighted_snippet(cast("str", first_match.title), keywords=keywords, max_length=180),
-        body_html=_highlighted_snippet(cast("str", first_match.body), keywords=keywords, max_length=260),
+        title_html=highlighted_snippet(cast("str", first_match.title), keywords=keywords, max_length=180),
+        body_html=highlighted_snippet(cast("str", first_match.body), keywords=keywords, max_length=260),
     )
 
 
@@ -576,59 +575,3 @@ def _keyword_terms(matches: Iterable[Match]) -> tuple[str, ...]:
 def _monitor_labels(matches: Iterable[Match]) -> tuple[str, ...]:
     """Return display labels for all monitors that matched an item."""
     return tuple(sorted({match.monitor.label for match in matches if match.monitor.label}, key=str.casefold))
-
-
-def _highlighted_snippet(text: str, *, keywords: tuple[str, ...], max_length: int) -> SafeString:
-    """Return escaped HTML with matched keywords wrapped in <mark> tags."""
-    normalized = text.strip()
-    if not normalized:
-        return format_html("{}", "")
-
-    snippet = _snippet_window(normalized, keywords=keywords, max_length=max_length)
-    pattern = _keyword_pattern(keywords)
-    if pattern is None:
-        return format_html("{}", snippet)
-
-    chunks: list[SafeString] = []
-    last_end = 0
-    for match in pattern.finditer(snippet):
-        chunks.append(format_html("{}", snippet[last_end : match.start()]))
-        chunks.append(format_html("<mark>{}</mark>", match.group(0)))
-        last_end = match.end()
-    chunks.append(format_html("{}", snippet[last_end:]))
-    return format_html_join("", "{}", ((chunk,) for chunk in chunks))
-
-
-def _snippet_window(text: str, *, keywords: tuple[str, ...], max_length: int) -> str:
-    """Extract a bounded snippet, centering around the first keyword when possible."""
-    if len(text) <= max_length:
-        return text
-
-    pattern = _keyword_pattern(keywords)
-    if pattern is None:
-        return f"{text[: max_length - 1].rstrip()}…"
-
-    matched = pattern.search(text)
-    if matched is None:
-        return f"{text[: max_length - 1].rstrip()}…"
-
-    match_start = matched.start()
-    half = max_length // 2
-    start = max(match_start - half, 0)
-    end = min(start + max_length, len(text))
-    if end - start < max_length:
-        start = max(end - max_length, 0)
-
-    prefix = "…" if start > 0 else ""
-    suffix = "…" if end < len(text) else ""
-    return f"{prefix}{text[start:end].strip()}{suffix}"
-
-
-def _keyword_pattern(keywords: tuple[str, ...]) -> re.Pattern[str] | None:
-    """Compile a case-insensitive regex from deduplicated non-blank keywords."""
-    non_blank_keywords = [keyword.strip() for keyword in keywords if keyword.strip()]
-    if not non_blank_keywords:
-        return None
-
-    deduped = sorted(set(non_blank_keywords), key=lambda value: (-len(value), value.casefold()))
-    return re.compile("|".join(re.escape(keyword) for keyword in deduped), flags=re.IGNORECASE)

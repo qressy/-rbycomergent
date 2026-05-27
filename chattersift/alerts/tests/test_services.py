@@ -11,11 +11,13 @@ from django.utils import timezone
 
 from chattersift.alerts.models import EmailNotificationSchedule
 from chattersift.alerts.models import NotificationCadence
+from chattersift.alerts.services import EMAIL_BODY_SNIPPET_LENGTH
 from chattersift.alerts.services import build_user_match_alerts
 from chattersift.alerts.services import render_user_match_alerts
 from chattersift.alerts.services import send_due_email_digests
 from chattersift.alerts.services import send_immediate_email_digests
 from chattersift.alerts.services import update_email_notification_preference
+from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.tracking.models import Match
 from chattersift.tracking.models import Monitor
 from chattersift.users.tests.factories import UserFactory
@@ -90,6 +92,45 @@ def test_render_user_match_alerts_highlights_keywords_case_insensitively() -> No
     assert "<mark>Postgres</mark>" in rendered_alerts[0].highlighted_body
 
 
+def test_render_user_match_alerts_uses_keyword_centered_body_snippet() -> None:
+    user = UserFactory()
+    monitor = Monitor.objects.create(user=user, subreddit="django", keyword="postgres")
+    body = f"LEADING-OMITTED {'a' * 600} Postgres {'b' * 600} TRAILING-OMITTED"
+    match = _create_match(monitor, reddit_item_id="t3_snippet", body=body)
+    alerts = build_user_match_alerts([match])
+
+    rendered_alert = render_user_match_alerts(alerts)[0]
+
+    assert len(rendered_alert.body_snippet) == EMAIL_BODY_SNIPPET_LENGTH
+    assert rendered_alert.body_snippet.startswith("…")
+    assert rendered_alert.body_snippet.endswith("…")
+    assert "Postgres" in rendered_alert.body_snippet
+    assert "LEADING-OMITTED" not in rendered_alert.body_snippet
+    assert "TRAILING-OMITTED" not in rendered_alert.body_snippet
+    assert "<mark>Postgres</mark>" in rendered_alert.highlighted_body_snippet
+
+
+def test_render_user_match_alerts_semantic_only_body_snippet_starts_at_beginning() -> None:
+    user = UserFactory()
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode=MonitorMatchMode.SEMANTIC,
+        semantic_description="Django deployment discussions",
+    )
+    body = f"semantic opening {'a' * 600} TRAILING-OMITTED"
+    match = _create_match(monitor, reddit_item_id="t3_semantic", body=body)
+    alerts = build_user_match_alerts([match])
+
+    rendered_alert = render_user_match_alerts(alerts)[0]
+
+    assert len(rendered_alert.body_snippet) == EMAIL_BODY_SNIPPET_LENGTH
+    assert rendered_alert.body_snippet.startswith("semantic opening")
+    assert rendered_alert.body_snippet.endswith("…")
+    assert "TRAILING-OMITTED" not in rendered_alert.body_snippet
+    assert "<mark>" not in rendered_alert.highlighted_body_snippet
+
+
 def test_update_preference_sets_first_opt_in_baseline_once(user) -> None:
     first = update_email_notification_preference(user=user)
     baseline = first.started_at
@@ -120,6 +161,32 @@ def test_send_immediate_email_digests_queues_new_item_once(monkeypatch, user) ->
     assert "<mark>Postgres</mark>" in queued_signatures[0][0].kwargs["html_message"]
     assert queued_signatures[0][1].name == "chattersift.alerts.tasks.record_match_email_delivery"
     assert queued_signatures[0][1].kwargs["reddit_item_ids"] == ["t3_immediate"]
+
+
+def test_send_immediate_email_digests_renders_snippets_not_full_body(monkeypatch, user) -> None:
+    _verify_email(user)
+    update_email_notification_preference(user=user)
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        keyword="postgres",
+        notification_cadence=NotificationCadence.IMMEDIATE,
+    )
+    body = f"LEADING-OMITTED {'a' * 600} Postgres {'b' * 600} TRAILING-OMITTED"
+    match = _create_match(monitor, reddit_item_id="t3_email_snippet", body=body)
+    queued_signatures = []
+    monkeypatch.setattr("chattersift.alerts.services.current_app.signature", _signature_factory(queued_signatures))
+
+    assert send_immediate_email_digests([match.pk]) == 1
+
+    text_body = queued_signatures[0][0].kwargs["message"]
+    html_body = queued_signatures[0][0].kwargs["html_message"]
+    assert body not in text_body
+    assert body not in html_body
+    assert "LEADING-OMITTED" not in text_body
+    assert "TRAILING-OMITTED" not in text_body
+    assert "Postgres" in text_body
+    assert "<mark>Postgres</mark>" in html_body
 
 
 def test_send_immediate_email_digests_ignores_non_immediate_monitors(monkeypatch, user) -> None:
@@ -214,12 +281,19 @@ def test_off_monitor_keeps_pending_matches_for_reenable(monkeypatch, user) -> No
     assert queued_signatures[0][1].kwargs["reddit_item_ids"] == ["t3_pending"]
 
 
-def _create_match(monitor: Monitor, *, reddit_item_id: str) -> Match:
+def _create_match(
+    monitor: Monitor,
+    *,
+    reddit_item_id: str,
+    title: str = "Django deployment",
+    body: str = "Postgres and HTMX notes.",
+) -> Match:
     return Match.objects.create(
         monitor=monitor,
         reddit_item_id=reddit_item_id,
-        title="Django deployment",
-        body="Postgres and HTMX notes.",
+        match_mode=monitor.match_mode,
+        title=title,
+        body=body,
         permalink=f"https://www.reddit.com/r/django/comments/{reddit_item_id}/example/",
         occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
     )

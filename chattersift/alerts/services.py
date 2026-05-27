@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import cast
@@ -14,10 +13,9 @@ from django.db.models import Exists
 from django.db.models import OuterRef
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.html import conditional_escape
-from django.utils.safestring import SafeString
-from django.utils.safestring import mark_safe
 
+from chattersift.core.text_snippets import highlighted_snippet
+from chattersift.core.text_snippets import plain_snippet
 from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.tracking.models import Match
 
@@ -33,7 +31,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from datetime import datetime
 
+    from django.utils.safestring import SafeString
+
 User = get_user_model()
+EMAIL_TITLE_SNIPPET_LENGTH = 180
+EMAIL_BODY_SNIPPET_LENGTH = 500
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,6 +73,10 @@ class RenderedUserMatchAlert:
     monitor_ids: tuple[int, ...]
     title: str
     body: str
+    title_snippet: str
+    body_snippet: str
+    highlighted_title_snippet: SafeString
+    highlighted_body_snippet: SafeString
     highlighted_title: SafeString
     highlighted_body: SafeString
     permalink: str
@@ -216,26 +222,52 @@ def _monitor_labels(matches: Iterable[Match]) -> tuple[str, ...]:
 
 
 def render_user_match_alerts(alerts: Iterable[UserMatchAlert]) -> list[RenderedUserMatchAlert]:
-    """Adds HTML-safe keyword highlighting for email rendering."""
+    """Interface: add bounded text and HTML snippets for email rendering."""
 
-    return [
-        RenderedUserMatchAlert(
-            user_id=alert.user_id,
-            subreddit=alert.subreddit,
-            reddit_item_id=alert.reddit_item_id,
-            matched_keywords=alert.matched_keywords,
-            monitor_labels=alert.monitor_labels,
-            match_ids=alert.match_ids,
-            monitor_ids=alert.monitor_ids,
-            title=alert.title,
-            body=alert.body,
-            highlighted_title=_highlight_keywords(alert.title, alert.matched_keywords),
-            highlighted_body=_highlight_keywords(alert.body, alert.matched_keywords),
-            permalink=alert.permalink,
-            occurred_at=alert.occurred_at,
+    rendered_alerts = []
+    for alert in alerts:
+        title_snippet = plain_snippet(
+            alert.title,
+            keywords=alert.matched_keywords,
+            max_length=EMAIL_TITLE_SNIPPET_LENGTH,
         )
-        for alert in alerts
-    ]
+        body_snippet = plain_snippet(
+            alert.body,
+            keywords=alert.matched_keywords,
+            max_length=EMAIL_BODY_SNIPPET_LENGTH,
+        )
+        highlighted_title_snippet = highlighted_snippet(
+            alert.title,
+            keywords=alert.matched_keywords,
+            max_length=EMAIL_TITLE_SNIPPET_LENGTH,
+        )
+        highlighted_body_snippet = highlighted_snippet(
+            alert.body,
+            keywords=alert.matched_keywords,
+            max_length=EMAIL_BODY_SNIPPET_LENGTH,
+        )
+        rendered_alerts.append(
+            RenderedUserMatchAlert(
+                user_id=alert.user_id,
+                subreddit=alert.subreddit,
+                reddit_item_id=alert.reddit_item_id,
+                matched_keywords=alert.matched_keywords,
+                monitor_labels=alert.monitor_labels,
+                match_ids=alert.match_ids,
+                monitor_ids=alert.monitor_ids,
+                title=alert.title,
+                body=alert.body,
+                title_snippet=title_snippet,
+                body_snippet=body_snippet,
+                highlighted_title_snippet=highlighted_title_snippet,
+                highlighted_body_snippet=highlighted_body_snippet,
+                highlighted_title=highlighted_title_snippet,
+                highlighted_body=highlighted_body_snippet,
+                permalink=alert.permalink,
+                occurred_at=alert.occurred_at,
+            ),
+        )
+    return rendered_alerts
 
 
 def _eligible_preferences(*, user_ids: set[int]) -> list[EmailNotificationPreference]:
@@ -341,34 +373,3 @@ def _digest_subject(alert_count: int) -> str:
     """Build singular/plural digest subject text based on alert count."""
     item_label = "match" if alert_count == 1 else "matches"
     return f"ChatterSift: {alert_count} new Reddit {item_label}"
-
-
-def _highlight_keywords(text: str, keywords: Iterable[str]) -> SafeString:
-    """Escape text and wrap case-insensitive keyword matches in <mark> tags."""
-    if not text:
-        return mark_safe("")
-
-    normalized_keywords = sorted(
-        {str(keyword) for keyword in keywords if keyword},
-        key=_keyword_length,
-        reverse=True,
-    )
-    if not normalized_keywords:
-        # Source text is escaped before intentionally returning safe email HTML.
-        return mark_safe(conditional_escape(text))  # noqa: S308
-
-    pattern = re.compile("|".join(re.escape(keyword) for keyword in normalized_keywords), flags=re.IGNORECASE)
-    highlighted_parts: list[str] = []
-    cursor = 0
-    for match in pattern.finditer(text):
-        highlighted_parts.append(str(conditional_escape(text[cursor : match.start()])))
-        highlighted_parts.append(f"<mark>{conditional_escape(match.group(0))}</mark>")
-        cursor = match.end()
-    highlighted_parts.append(str(conditional_escape(text[cursor:])))
-    # All source text is escaped; only the controlled mark tags are introduced here.
-    return mark_safe("".join(highlighted_parts))  # noqa: S308
-
-
-def _keyword_length(keyword: str) -> int:
-    """Return keyword length for deterministic longest-first highlighting sort."""
-    return len(keyword)
