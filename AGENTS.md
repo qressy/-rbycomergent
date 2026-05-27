@@ -70,7 +70,7 @@ This is HTMX/server-rendered first. Django Ninja APIs are opt-in via `CHATTERSIF
 - Always include interface comments. Include certain inline comments when code is less clear.
 
 ## Frontend UX and Style
-- Provide inline loading indicators for async operations (e.g., `hx-indicator="#global-loading"`); avoid toasts unless destructive confirmations, external errors, or background task notifications.
+- For async operations, use the narrowest visible loading indicator that fits the interaction: inline indicators for control- or region-specific work, and `hx-indicator="#global-loading"` only for page-level or broad operations. Do not use toasts for routine loading or completion feedback; reserve them for destructive confirmations, external errors, or background task notifications.
 - Follow the frontend color system in `COLOR_SYSTEM.md`.
 - Use DaisyUI semantic color classes (`bg-primary`, `text-error`, etc.) instead of raw Tailwind colors.
 - Use DaisyUI component classes (`btn`, `badge`, `alert`, `loading`, etc.) for consistent styling.
