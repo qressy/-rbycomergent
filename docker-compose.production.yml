@@ -31,7 +31,7 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz/', timeout=5)"
+        - "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:5000/healthz/', headers={'Host': os.environ['CHATTERSIFT_SITE_DOMAIN'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=5)"
       interval: 30s
       timeout: 10s
       retries: 3
