@@ -59,7 +59,7 @@ The Tailwind and DaisyUI source stylesheet is `chattersift/static/src/project.cs
 
 ### Local workflows
 
-Use `just shell` to run Chattersift from the local shell on port 8000. Use `just up` to run it through Docker.
+Use `make shell` to run Chattersift from the local shell on port 8000. Use `make up` to run it through Docker.
 Both workflows build CSS and run `collectstatic`; the shell workflow also runs migrations before starting Django.
 
 ### Live reloading
@@ -117,7 +117,7 @@ Chattersift is designed to run on a single VPS with Docker Compose and Caddy.
 
 ```bash
 uv sync
-just deploy-init
+make deploy-init
 ```
 
 Edit `.env.production` and set at least:
@@ -133,8 +133,8 @@ Edit `.env.production` and set at least:
 Then start the production stack:
 
 ```bash
-just deploy
-just deploy-logs
+make deploy
+make deploy-logs
 ```
 
 The production stack includes Postgres, Redis, Django, Celery, and Caddy. It runs migrations automatically before the web and worker services start.

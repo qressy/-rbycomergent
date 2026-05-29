@@ -22,8 +22,8 @@ uv run python manage.py check   # Validate Django configuration
 uv run pytest                   # Run the test suite
 uv run ruff check .             # Run lint checks
 uv run ty check                 # Run type checks
-just up                         # Start local Docker services
-just manage migrate             # Run Django management commands in Docker
+make up                         # Start local Docker services
+make manage migrate             # Run Django management commands in Docker
 ```
 
 Direnv is supported via `.envrc`. Keep local secrets in `.env` or `.envrc.local`; both are gitignored.

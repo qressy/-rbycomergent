@@ -6,7 +6,7 @@ This deployment path targets one VPS running Docker Compose. Caddy terminates HT
 
 ```bash
 uv sync
-just deploy-init
+make deploy-init
 ```
 
 Edit `.env.production`. The bootstrap command generates internal secrets for `DJANGO_SECRET_KEY`, `DJANGO_ADMIN_URL`, and `POSTGRES_PASSWORD`; do not share those values.
@@ -24,7 +24,7 @@ Required user-edited values:
 Start the stack:
 
 ```bash
-just deploy
+make deploy
 ```
 
 Django is served behind Caddy. The health endpoint is available at `/healthz/`.
@@ -32,11 +32,11 @@ Django is served behind Caddy. The health endpoint is available at `/healthz/`.
 ## Common Commands
 
 ```bash
-just deploy                 # build, migrate, and start
-just deploy-logs            # follow logs
-just deploy-manage shell    # run a Django management command
-just deploy-manage createsuperuser
-docker compose --env-file .env.production -f docker-compose.production.yml ps
+make deploy                 # build, migrate, and start
+make deploy-logs            # follow logs
+make deploy-manage shell    # run a Django management command
+make deploy-manage createsuperuser
+make ps production
 ```
 
 ## Upgrades
@@ -44,7 +44,7 @@ docker compose --env-file .env.production -f docker-compose.production.yml ps
 Pull the new code, review any new variables in `.env.production.example`, update `.env.production`, then run:
 
 ```bash
-just deploy
+make deploy
 ```
 
 The `migrate` service runs `migrate --noinput` and syncs `django_site` from `CHATTERSIFT_SITE_DOMAIN` before Django and Celery start.
@@ -122,19 +122,19 @@ Postgres data lives in the `production_postgres_data` Docker volume. Backup file
 Create a database backup:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml run --rm postgres backup
+make backup
 ```
 
 List backup files:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml run --rm postgres backups
+make backups
 ```
 
 Restore using the cookiecutter maintenance command:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml run --rm postgres restore <backup-file>
+make restore <backup-file>
 ```
 
 Test restores on a separate host before relying on a backup process.
@@ -149,4 +149,4 @@ If forms fail CSRF checks, update `DJANGO_CSRF_TRUSTED_ORIGINS` with full `https
 
 If email is not delivered, verify `CHATTERSIFT_EMAIL_PROVIDER`, provider credentials, and sender domain verification with the provider.
 
-If the app starts without styling, rebuild the image with `just deploy`; the production Dockerfile runs `npm ci && npm run build:css`.
+If the app starts without styling, rebuild the image with `make deploy`; the production Dockerfile runs `npm ci && npm run build:css`.
