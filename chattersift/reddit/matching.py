@@ -126,13 +126,21 @@ class SemanticRedditMatcher(RedditMatcher):
                     {
                         "role": "system",
                         "content": (
-                            "You decide whether Reddit content matches a user's monitoring intent. "
-                            "Return only JSON with keys matched, confidence, and reason."
+                            "You are a strict binary classifier for Reddit monitoring intents. "
+                            "Return exactly one JSON object with these top-level keys: "
+                            "matched, confidence, and reason. "
+                            "matched must be a boolean true or false for the entire Reddit item. "
+                            "confidence must be a number from 0 to 1. "
+                            "reason must be a short string. "
+                            "Do not return arrays, nested decision objects, a matches key, or per-match results."
                         ),
                     },
                     {
                         "role": "user",
                         "content": (
+                            "Decide whether the Reddit content satisfies the monitoring intent.\n"
+                            "Respond only with JSON in this exact shape: "
+                            '{"matched": false, "confidence": 0.0, "reason": "short reason"}\n\n'
                             f"Monitoring intent:\n{request.intent.semantic_description}\n\n"
                             f"Reddit content:\n{_truncate_text(text)}"
                         ),
@@ -403,6 +411,6 @@ def _bounded_confidence(value: object) -> float | None:
         return None
     try:
         confidence = float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return max(0.0, min(confidence, 1.0))

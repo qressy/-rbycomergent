@@ -18,6 +18,7 @@ from chattersift.reddit.models import RedditItem
 
 MONITOR_ID = 42
 SEMANTIC_RESPONSE_CONFIDENCE = 0.82
+SEMANTIC_NONMATCH_CONFIDENCE = 0.12
 
 
 def test_keyword_matcher_matches_title_and_body() -> None:
@@ -141,6 +142,42 @@ def test_semantic_matcher_parses_litellm_json_response(monkeypatch, settings) ->
     assert decision.confidence == SEMANTIC_RESPONSE_CONFIDENCE
     assert decision.match_mode == MonitorMatchMode.SEMANTIC
     assert decision.reason == "incident"
+
+
+def test_semantic_matcher_prompt_requires_binary_decision_shape(monkeypatch, settings) -> None:
+    """Semantic matching prompts the model for one top-level binary decision."""
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    intent = MonitorIntent(
+        subreddit="django",
+        keywords=(),
+        match_mode=MonitorMatchMode.SEMANTIC,
+        semantic_description="Django deployment incidents",
+        monitor_id=MONITOR_ID,
+    )
+    item = RedditItemPayload(
+        reddit_id="t3_semantic_prompt",
+        item_type=RedditItem.RedditItemType.POST,
+        subreddit="django",
+        permalink="https://www.reddit.com/r/django/comments/semantic-prompt/example/",
+        occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
+        title="Production outage",
+        body="A Django deployment failed after a migration.",
+    )
+
+    def fake_completion(**kwargs):
+        system_content = kwargs["messages"][0]["content"]
+        user_content = kwargs["messages"][1]["content"]
+        assert "matched must be a boolean true or false" in system_content
+        assert "Do not return arrays, nested decision objects, a matches key" in system_content
+        assert '{"matched": false, "confidence": 0.0, "reason": "short reason"}' in user_content
+        return {"choices": [{"message": {"content": '{"matched": false, "confidence": 0.12, "reason": "off topic"}'}}]}
+
+    monkeypatch.setattr("chattersift.reddit.matching.completion", fake_completion)
+
+    decision = SemanticRedditMatcher().evaluate(MatchRequest(intent=intent, item=item))
+
+    assert decision.matched is False
+    assert decision.confidence == SEMANTIC_NONMATCH_CONFIDENCE
 
 
 def test_semantic_matcher_accepts_string_boolean_from_litellm(monkeypatch, settings) -> None:
