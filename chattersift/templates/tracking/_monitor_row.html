@@ -1,0 +1,100 @@
+{% load i18n %}
+
+{# One semantic or hybrid monitor row with edit-in-place. #}
+{# Expected context: monitor, mode, inline_error. #}
+<div x-data="{ editing: false, expanded: false, kw: '{{ monitor.keyword|escapejs }}', desc: '{{ monitor.semantic_description|escapejs }}', err: '
+  {% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}
+    {{ inline_error.message|escapejs }}
+  {% endif %}
+  ' }" {% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}x-init="editing = true"{% endif %} class="group rounded-md border-l-4 {% if mode == 'semantic' %}border-secondary bg-secondary/5{% else %}border-accent bg-accent/5{% endif %} {% if not monitor.is_active %}opacity-50{% endif %}">
+  {# Display state #}
+  <div x-show="!editing" class="flex items-start gap-2 px-2.5 py-1.5">
+    <div class="flex-1 min-w-0 text-sm leading-snug">
+      {% if mode == 'keyword_semantic' %}
+        <span class="font-semibold text-accent">{{ monitor.keyword }}</span>
+        <span class="text-base-content/40 mx-1">—</span>
+      {% endif %}
+      <span class="text-base-content/80"
+            :class="expanded ? '' : 'line-clamp-2'"
+            @click="expanded = !expanded"
+            role="button"
+            title="{% translate 'Click to expand or collapse' %}">{{ monitor.semantic_description }}</span>
+    </div>
+    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button type="button"
+              class="btn btn-ghost btn-xs h-6 w-6 min-h-6 p-0"
+              @click="editing = true; kw = '{{ monitor.keyword|escapejs }}'; desc = '{{ monitor.semantic_description|escapejs }}'; err = ''"
+              title="{% translate 'Edit' %}">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-3.5 w-3.5"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor"
+             stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+        </svg>
+      </button>
+      <form method="post"
+            action="{% url 'tracking:monitor_delete' monitor.pk %}"
+            hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
+            hx-target="#dashboard-content"
+            hx-swap="outerHTML"
+            hx-indicator="#global-loading"
+            class="inline-flex">
+        {% csrf_token %}
+        <button type="submit"
+                class="btn btn-ghost btn-xs h-6 w-6 min-h-6 p-0 text-error hover:bg-error hover:text-error-content"
+                title="{% translate 'Delete' %}">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-3.5 w-3.5"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor"
+               stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+  {# Edit state #}
+  <form x-show="editing"
+        x-cloak
+        method="post"
+        action="{% url 'tracking:monitor_edit' monitor.pk %}"
+        hx-post="{% url 'tracking:monitor_edit' monitor.pk %}"
+        hx-target="#dashboard-content"
+        hx-swap="outerHTML"
+        hx-indicator="#global-loading"
+        class="flex flex-col gap-2 px-2.5 py-2"
+        @keydown.escape="editing = false; err = ''">
+    {% csrf_token %}
+    <input type="hidden" name="match_mode" value="{{ mode }}" />
+    {% if mode == 'keyword_semantic' %}
+      <input type="text"
+             name="keyword"
+             x-model="kw"
+             class="input input-bordered input-xs h-7 w-full"
+             :class="err ? 'border-error' : ''"
+             placeholder="{% translate 'keyword' %}"
+             maxlength="255"
+             required />
+    {% endif %}
+    <textarea name="semantic_description"
+              x-model="desc"
+              class="textarea textarea-bordered textarea-sm w-full min-h-16 leading-snug"
+              :class="err ? 'border-error' : ''"
+              maxlength="2000"
+              required></textarea>
+    <div class="flex items-center justify-between gap-2">
+      <span x-show="err" x-text="err" class="text-xs text-error"></span>
+      <span x-show="!err"></span>
+      <div class="flex items-center gap-1.5">
+        <button type="button"
+                class="btn btn-ghost btn-xs"
+                @click="editing = false; err = ''">{% translate "Cancel" %}</button>
+        <button type="submit" class="btn btn-primary btn-xs">{% translate "Save" %}</button>
+      </div>
+    </div>
+  </form>
+</div>

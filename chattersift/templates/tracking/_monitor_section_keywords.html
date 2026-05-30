@@ -1,0 +1,162 @@
+{% load i18n %}
+
+{# Keywords sub-section: chip wrap with rename-in-place + inline add. #}
+{# Expected context: sub (subreddit), monitors (keyword monitors), inline_error. #}
+<section x-data="{ adding: false, newKeyword: '' }"
+         {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}x-init="adding = true; newKeyword = ''"{% endif %}>
+  <header class="flex items-center gap-2 mb-1.5">
+    <h3 class="text-xs uppercase tracking-wide text-base-content/50 font-semibold">{% translate "Keywords" %}</h3>
+  </header>
+  <div class="flex flex-wrap items-center gap-2">
+    {% for monitor in monitors %}
+      <div x-data="{ editing: false, value: '{{ monitor.keyword|escapejs }}', err: '
+        {% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}
+          {{ inline_error.message|escapejs }}
+        {% endif %}
+        ' }" {% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}x-init="editing = true"{% endif %}>
+        {# Display chip #}
+        <div x-show="!editing"
+             class="inline-flex items-stretch h-7 rounded-md overflow-hidden border border-base-300 {% if not monitor.is_active %}opacity-50{% endif %}">
+          <button type="button"
+                  class="inline-flex items-center px-2.5 text-sm font-semibold leading-none bg-primary text-primary-content hover:brightness-110 hover:cursor-pointer transition"
+                  @click="editing = true; value = '{{ monitor.keyword|escapejs }}'; err = ''; $nextTick(() => $refs['inp{{ monitor.pk }}'].focus())"
+                  title="{% translate 'Click to rename' %}">{{ monitor.keyword }}</button>
+          <form method="post"
+                action="{% url 'tracking:monitor_delete' monitor.pk %}"
+                hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
+                hx-target="#dashboard-content"
+                hx-swap="outerHTML"
+                hx-indicator="#global-loading"
+                class="inline-flex">
+            {% csrf_token %}
+            <button type="submit"
+                    class="inline-flex items-center justify-center w-6 bg-base-100 text-base-content/60 hover:bg-error hover:text-error-content transition-colors hover:cursor-pointer"
+                    title="{% blocktranslate with kw=monitor.keyword %}Remove {{ kw }}{% endblocktranslate %}">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="h-3 w-3"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor"
+                   stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </form>
+        </div>
+        {# Edit chip #}
+        <div x-show="editing" x-cloak class="inline-flex flex-col gap-0.5">
+          <form method="post"
+                action="{% url 'tracking:monitor_edit' monitor.pk %}"
+                hx-post="{% url 'tracking:monitor_edit' monitor.pk %}"
+                hx-target="#dashboard-content"
+                hx-swap="outerHTML"
+                hx-indicator="#global-loading"
+                class="inline-flex items-center gap-1"
+                @keydown.escape="editing = false; err = ''">
+            {% csrf_token %}
+            <input type="hidden" name="match_mode" value="keyword" />
+            <input type="text"
+                   name="keyword"
+                   x-ref="inp{{ monitor.pk }}"
+                   x-model="value"
+                   class="input input-bordered input-xs h-7 w-40"
+                   :class="err ? 'border-error' : ''"
+                   maxlength="255"
+                   required />
+            <button type="submit"
+                    class="btn btn-primary btn-xs h-7 min-h-7 px-2"
+                    title="{% translate 'Save' %}">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="h-3 w-3"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor"
+                   stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+            <button type="button"
+                    class="btn btn-ghost btn-xs h-7 min-h-7 px-2"
+                    @click="editing = false; err = ''"
+                    title="{% translate 'Cancel' %}">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="h-3 w-3"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor"
+                   stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </form>
+          <span x-show="err" x-text="err" class="text-xs text-error"></span>
+        </div>
+      </div>
+    {% endfor %}
+    {# Inline add affordance #}
+    <button type="button"
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-dashed border-base-300 text-xs font-medium text-base-content/50 hover:text-base-content hover:border-base-content/40 transition-colors hover:cursor-pointer"
+            x-show="!adding"
+            @click="adding = true; newKeyword = ''; $nextTick(() => $refs.addInp.focus())">
+      <svg xmlns="http://www.w3.org/2000/svg"
+           class="h-3 w-3"
+           fill="none"
+           viewBox="0 0 24 24"
+           stroke="currentColor"
+           stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      {% translate "add" %}
+    </button>
+    <div x-show="adding" x-cloak class="inline-flex flex-col gap-0.5">
+      <form method="post"
+            action="{% url 'tracking:monitor_add' sub %}"
+            hx-post="{% url 'tracking:monitor_add' sub %}"
+            hx-target="#dashboard-content"
+            hx-swap="outerHTML"
+            hx-indicator="#global-loading"
+            class="inline-flex items-center gap-1"
+            @keydown.escape="adding = false; newKeyword = ''">
+        {% csrf_token %}
+        <input type="hidden" name="match_mode" value="keyword" />
+        <input type="text"
+               name="keyword"
+               x-ref="addInp"
+               x-model="newKeyword"
+               class="input input-bordered input-xs h-7 w-40"
+               placeholder="{% translate 'keyword' %}"
+               maxlength="255"
+               required
+               {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %} :class="'border-error'" {% endif %} />
+        <button type="submit"
+                class="btn btn-primary btn-xs h-7 min-h-7 px-2"
+                title="{% translate 'Add' %}">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-3 w-3"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor"
+               stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+        <button type="button"
+                class="btn btn-ghost btn-xs h-7 min-h-7 px-2"
+                @click="adding = false; newKeyword = ''"
+                title="{% translate 'Cancel' %}">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-3 w-3"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor"
+               stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </form>
+      {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}
+        <span class="text-xs text-error">{{ inline_error.message }}</span>
+      {% endif %}
+    </div>
+  </div>
+</section>

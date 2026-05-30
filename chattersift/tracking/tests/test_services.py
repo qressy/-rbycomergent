@@ -12,12 +12,15 @@ from chattersift.reddit.models import RedditItem
 from chattersift.tracking.models import Match
 from chattersift.tracking.models import MatchRetentionPreference
 from chattersift.tracking.models import Monitor
+from chattersift.tracking.services import MonitorAlreadyExistsError
+from chattersift.tracking.services import add_monitor_to_subreddit
 from chattersift.tracking.services import build_dashboard_groups
 from chattersift.tracking.services import build_matches_feed
 from chattersift.tracking.services import get_match_retention_days
 from chattersift.tracking.services import prune_expired_matches
 from chattersift.tracking.services import prune_expired_matches_for_user
 from chattersift.tracking.services import update_match_retention_days
+from chattersift.tracking.services import update_monitor
 from chattersift.tracking.services import upsert_keyword_monitors
 from chattersift.users.tests.factories import UserFactory
 
@@ -277,6 +280,134 @@ def test_prune_expired_matches_applies_default_to_users_without_preference(user)
 
     assert prune_expired_matches(now=now) == 1
     assert not Match.objects.filter(pk=match.pk).exists()
+
+
+def test_add_monitor_to_subreddit_creates_keyword_monitor(user) -> None:
+    monitor = add_monitor_to_subreddit(
+        user=user,
+        subreddit="Django",
+        match_mode="keyword",
+        keyword="htmx",
+    )
+
+    assert monitor.subreddit == "django"
+    assert monitor.match_mode == "keyword"
+    assert monitor.keyword == "htmx"
+    assert monitor.semantic_description == ""
+    assert monitor.semantic_fingerprint == ""
+
+
+def test_add_monitor_to_subreddit_creates_semantic_monitor(user, settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+
+    monitor = add_monitor_to_subreddit(
+        user=user,
+        subreddit="django",
+        match_mode="semantic",
+        semantic_description="Posts about deployment pain",
+    )
+
+    assert monitor.match_mode == "semantic"
+    assert monitor.keyword == ""
+    assert monitor.semantic_description == "Posts about deployment pain"
+    assert monitor.semantic_fingerprint != ""
+
+
+def test_add_monitor_to_subreddit_creates_hybrid_monitor(user) -> None:
+    monitor = add_monitor_to_subreddit(
+        user=user,
+        subreddit="django",
+        match_mode="keyword_semantic",
+        keyword="payments",
+        semantic_description="Refund-related complaints",
+    )
+
+    assert monitor.match_mode == "keyword_semantic"
+    assert monitor.keyword == "payments"
+    assert monitor.semantic_description == "Refund-related complaints"
+    assert monitor.semantic_fingerprint != ""
+
+
+def test_add_monitor_to_subreddit_reactivates_inactive_duplicate(user) -> None:
+    existing = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode="keyword",
+        keyword="htmx",
+        is_active=False,
+    )
+
+    monitor = add_monitor_to_subreddit(user=user, subreddit="django", match_mode="keyword", keyword="HTMX")
+
+    existing.refresh_from_db()
+    assert monitor.pk == existing.pk
+    assert existing.is_active
+
+
+def test_add_monitor_to_subreddit_raises_on_active_duplicate(user) -> None:
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+
+    with pytest.raises(MonitorAlreadyExistsError):
+        add_monitor_to_subreddit(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+
+
+def test_update_monitor_renames_keyword(user) -> None:
+    monitor = Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+
+    updated = update_monitor(user=user, pk=monitor.pk, match_mode="keyword", keyword="postgres")
+
+    assert updated.pk == monitor.pk
+    assert updated.keyword == "postgres"
+
+
+def test_update_monitor_changes_semantic_description_refingerprints(user) -> None:
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode="semantic",
+        semantic_description="old prompt",
+        semantic_fingerprint="oldfp",
+    )
+
+    updated = update_monitor(
+        user=user,
+        pk=monitor.pk,
+        match_mode="semantic",
+        semantic_description="new prompt about deployments",
+    )
+
+    assert updated.semantic_description == "new prompt about deployments"
+    assert updated.semantic_fingerprint != "oldfp"
+    assert updated.semantic_fingerprint != ""
+
+
+def test_update_monitor_changes_mode_clears_semantic_fields(user) -> None:
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode="keyword_semantic",
+        keyword="payments",
+        semantic_description="refunds",
+        semantic_fingerprint="abc",
+    )
+
+    updated = update_monitor(user=user, pk=monitor.pk, match_mode="keyword", keyword="payments")
+
+    assert updated.match_mode == "keyword"
+    assert updated.keyword == "payments"
+    assert updated.semantic_description == ""
+    assert updated.semantic_fingerprint == ""
+
+
+def test_update_monitor_raises_on_duplicate_after_edit(user) -> None:
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="postgres")
+    target = Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+
+    with pytest.raises(MonitorAlreadyExistsError):
+        update_monitor(user=user, pk=target.pk, match_mode="keyword", keyword="postgres")
+
+    target.refresh_from_db()
+    assert target.keyword == "htmx"
 
 
 def _create_match(

@@ -16,11 +16,13 @@ from chattersift.reddit.contracts import MonitorMatchMode
 
 from .forms import MATCH_RETENTION_FOREVER_VALUE
 from .forms import CadenceForm
-from .forms import KeywordAddForm
 from .forms import MatchRetentionForm
+from .forms import MonitorAddForm
 from .forms import MonitorBatchForm
+from .forms import MonitorEditForm
 from .models import Monitor
-from .services import add_keyword_to_subreddit
+from .services import MonitorAlreadyExistsError
+from .services import add_monitor_to_subreddit
 from .services import build_dashboard_groups
 from .services import build_matches_feed
 from .services import delete_single_monitor
@@ -30,6 +32,7 @@ from .services import prune_expired_matches_for_user
 from .services import toggle_subreddit_group
 from .services import update_group_cadence
 from .services import update_match_retention_days
+from .services import update_monitor
 from .services import upsert_monitors
 
 if TYPE_CHECKING:
@@ -71,18 +74,77 @@ def monitor_create(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @require_POST
-def monitor_add_keyword(request: HttpRequest, subreddit: str) -> HttpResponse:
-    """Adds a single keyword to an existing subreddit group."""
+def monitor_add(request: HttpRequest, subreddit: str) -> HttpResponse:
+    """Adds one monitor (keyword, semantic, or hybrid) to an existing group."""
 
-    form = KeywordAddForm(request.POST)
+    form = MonitorAddForm(request.POST)
+    inline_error: dict[str, object] | None = None
     if form.is_valid():
-        add_keyword_to_subreddit(
-            user=request.user,
-            subreddit=subreddit,
-            keyword=form.cleaned_data["keyword"],
-        )
+        try:
+            add_monitor_to_subreddit(
+                user=request.user,
+                subreddit=subreddit,
+                match_mode=form.cleaned_data["match_mode"],
+                keyword=form.cleaned_data["keyword"],
+                semantic_description=form.cleaned_data["semantic_description"],
+            )
+        except MonitorAlreadyExistsError:
+            inline_error = {
+                "kind": "add",
+                "subreddit": subreddit.casefold(),
+                "match_mode": form.cleaned_data["match_mode"],
+                "message": "A monitor with these settings already exists for this subreddit.",
+            }
+    else:
+        inline_error = {
+            "kind": "add",
+            "subreddit": subreddit.casefold(),
+            "match_mode": form.cleaned_data.get("match_mode") or "",
+            "message": _form_first_error(form),
+        }
 
-    return _render_dashboard_content(request, form=MonitorBatchForm())
+    return _render_dashboard_content(
+        request,
+        form=MonitorBatchForm(),
+        inline_error=inline_error,
+    )
+
+
+@login_required
+@require_POST
+def monitor_edit(request: HttpRequest, pk: int) -> HttpResponse:
+    """Edits one monitor's mode and content in place."""
+
+    monitor = get_object_or_404(Monitor, pk=pk, user=request.user)
+    form = MonitorEditForm(request.POST)
+    inline_error: dict[str, object] | None = None
+    if form.is_valid():
+        try:
+            update_monitor(
+                user=request.user,
+                pk=monitor.pk,
+                match_mode=form.cleaned_data["match_mode"],
+                keyword=form.cleaned_data["keyword"],
+                semantic_description=form.cleaned_data["semantic_description"],
+            )
+        except MonitorAlreadyExistsError:
+            inline_error = {
+                "kind": "edit",
+                "monitor_pk": monitor.pk,
+                "message": "A monitor with these settings already exists for this subreddit.",
+            }
+    else:
+        inline_error = {
+            "kind": "edit",
+            "monitor_pk": monitor.pk,
+            "message": _form_first_error(form),
+        }
+
+    return _render_dashboard_content(
+        request,
+        form=MonitorBatchForm(),
+        inline_error=inline_error,
+    )
 
 
 @login_required
@@ -197,7 +259,12 @@ def match_retention_update(request: HttpRequest) -> HttpResponse:
     return render(request, "dash/_settings_content.html", _settings_context(request, match_retention_form=form))
 
 
-def _dashboard_context(request: HttpRequest, *, form: MonitorBatchForm | None = None) -> dict[str, object]:
+def _dashboard_context(
+    request: HttpRequest,
+    *,
+    form: MonitorBatchForm | None = None,
+    inline_error: dict[str, object] | None = None,
+) -> dict[str, object]:
     """Build the dashboard template context for full-page and partial renders."""
     subreddit_groups = build_dashboard_groups(request.user, include_matches=False)
     form = form or MonitorBatchForm()
@@ -207,6 +274,7 @@ def _dashboard_context(request: HttpRequest, *, form: MonitorBatchForm | None = 
         "subreddit_groups": subreddit_groups,
         "cadence_choices": NotificationCadence.choices,
         "match_mode_choices": MonitorMatchMode.choices,
+        "inline_error": inline_error,
     }
 
 
@@ -235,14 +303,23 @@ def _render_dashboard_content(
     request: HttpRequest,
     *,
     form: MonitorBatchForm,
+    inline_error: dict[str, object] | None = None,
 ) -> HttpResponse:
     """Render just the dashboard content fragment used by HTMX updates."""
     html = render_to_string(
         "tracking/_dashboard_content.html",
-        _dashboard_context(request, form=form),
+        _dashboard_context(request, form=form, inline_error=inline_error),
         request=request,
     )
     return HttpResponse(html)
+
+
+def _form_first_error(form: MonitorAddForm | MonitorEditForm) -> str:
+    """Return the first error message from a bound form for inline display."""
+    for errors in form.errors.values():
+        if errors:
+            return str(errors[0])
+    return "Invalid input."
 
 
 def _matches_query_url(*, subreddit: str | None, page: int) -> str:

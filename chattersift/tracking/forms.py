@@ -100,34 +100,88 @@ class MonitorBatchForm(forms.Form):
 
     def clean(self) -> dict[str, object]:
         cleaned_data = super().clean()
-        match_mode = cleaned_data.get("match_mode") or MonitorMatchMode.KEYWORD
-        keywords = cleaned_data.get("keywords") or []
-        semantic_description = cleaned_data.get("semantic_description") or ""
-
-        if match_mode in {MonitorMatchMode.KEYWORD, MonitorMatchMode.KEYWORD_SEMANTIC} and not keywords:
-            self.add_error("keywords", ValidationError(_("Enter at least one keyword.")))
-        if match_mode in {MonitorMatchMode.SEMANTIC, MonitorMatchMode.KEYWORD_SEMANTIC}:
-            if not semantic_description:
-                self.add_error("semantic_description", ValidationError(_("Describe what should match semantically.")))
-            if not settings.CHATTERSIFT_SEMANTIC_LLM_MODEL:
-                self.add_error(
-                    "semantic_description",
-                    ValidationError(_("Semantic monitoring is not configured yet.")),
-                )
-
+        _apply_match_mode_validation(
+            self,
+            match_mode=cleaned_data.get("match_mode") or MonitorMatchMode.KEYWORD,
+            has_keyword=bool(cleaned_data.get("keywords")),
+            semantic_description=cleaned_data.get("semantic_description") or "",
+            keyword_field="keywords",
+        )
         return cleaned_data
 
 
-class KeywordAddForm(forms.Form):
-    """Validates a single keyword to add to an existing subreddit group."""
+class MonitorAddForm(forms.Form):
+    """Validates one monitor (any type) added inline to an existing group."""
 
-    keyword = forms.CharField(max_length=KEYWORD_MAX_LENGTH)
+    match_mode = forms.ChoiceField(
+        choices=MonitorMatchMode.choices,
+        initial=MonitorMatchMode.KEYWORD,
+    )
+    keyword = forms.CharField(max_length=KEYWORD_MAX_LENGTH, required=False)
+    semantic_description = forms.CharField(
+        max_length=SEMANTIC_DESCRIPTION_MAX_LENGTH,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
     def clean_keyword(self) -> str:
-        keyword = self.cleaned_data["keyword"].strip()
-        if not keyword:
-            raise ValidationError(_("Enter a keyword."))
+        keyword = (self.cleaned_data.get("keyword") or "").strip()
+        if len(keyword) > KEYWORD_MAX_LENGTH:
+            raise ValidationError(
+                _("Keywords must be %(limit_value)d characters or fewer."),
+                params={"limit_value": KEYWORD_MAX_LENGTH},
+            )
         return keyword
+
+    def clean_semantic_description(self) -> str:
+        description = (self.cleaned_data.get("semantic_description") or "").strip()
+        if len(description) > SEMANTIC_DESCRIPTION_MAX_LENGTH:
+            raise ValidationError(
+                _("Semantic descriptions must be %(limit_value)d characters or fewer."),
+                params={"limit_value": SEMANTIC_DESCRIPTION_MAX_LENGTH},
+            )
+        return description
+
+    def clean(self) -> dict[str, object]:
+        cleaned_data = super().clean()
+        _apply_match_mode_validation(
+            self,
+            match_mode=cleaned_data.get("match_mode") or MonitorMatchMode.KEYWORD,
+            has_keyword=bool(cleaned_data.get("keyword")),
+            semantic_description=cleaned_data.get("semantic_description") or "",
+            keyword_field="keyword",
+        )
+        return cleaned_data
+
+
+class MonitorEditForm(MonitorAddForm):
+    """Same fields as MonitorAddForm; distinct class for edit-endpoint typing."""
+
+
+def _apply_match_mode_validation(
+    form: forms.Form,
+    *,
+    match_mode: str,
+    has_keyword: bool,
+    semantic_description: str,
+    keyword_field: str,
+) -> None:
+    """Apply cross-field rules shared by all monitor-intent forms."""
+
+    if match_mode in {MonitorMatchMode.KEYWORD, MonitorMatchMode.KEYWORD_SEMANTIC} and not has_keyword:
+        message = _("Enter at least one keyword.") if keyword_field == "keywords" else _("Enter a keyword.")
+        form.add_error(keyword_field, ValidationError(message))
+    if match_mode in {MonitorMatchMode.SEMANTIC, MonitorMatchMode.KEYWORD_SEMANTIC}:
+        if not semantic_description:
+            form.add_error(
+                "semantic_description",
+                ValidationError(_("Describe what should match semantically.")),
+            )
+        if not settings.CHATTERSIFT_SEMANTIC_LLM_MODEL:
+            form.add_error(
+                "semantic_description",
+                ValidationError(_("Semantic monitoring is not configured yet.")),
+            )
 
 
 class CadenceForm(forms.Form):

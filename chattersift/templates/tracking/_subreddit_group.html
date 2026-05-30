@@ -1,205 +1,135 @@
 {% load i18n %}
 
-<article class="border border-base-300 bg-base-100 rounded-box overflow-hidden"
-         :class="{ 'opacity-60': false }"
-         x-data="{ confirmDelete: false, addingKeyword: false, newKeyword: '' }">
-  {# Card header #}
-  <div class="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
-    <div class="flex items-center gap-2.5 min-w-0">
-      <h2 class="font-display text-lg font-semibold tracking-tight truncate">r/{{ group.subreddit }}</h2>
-      {% if group.is_paused %}
-        <span class="badge badge-warning badge-outline badge-sm gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-3 w-3"
-               fill="none"
-               viewBox="0 0 24 24"
-               stroke="currentColor"
-               stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6" />
-          </svg>
-          {% translate "Paused" %}
-        </span>
-      {% endif %}
-    </div>
-    <div class="flex items-center gap-1 shrink-0">
-      {# Pause / Resume #}
-      <form method="post"
-            action="{% url 'tracking:monitor_toggle_group' group.subreddit %}"
-            hx-post="{% url 'tracking:monitor_toggle_group' group.subreddit %}"
-            hx-target="#dashboard-content"
-            hx-swap="outerHTML"
-            hx-indicator="#global-loading">
-        {% csrf_token %}
-        <button type="submit"
-                class="btn btn-ghost btn-xs gap-1"
-                title="{% if group.is_paused %}{% translate 'Resume' %}{% else %}{% translate 'Pause' %}{% endif %}">
-          {% if group.is_paused %}
+{% with sub=group.subreddit add_err=inline_error %}
+  <article class="border border-base-300 bg-base-100 rounded-box overflow-hidden"
+           x-data="{ confirmDelete: false }">
+    {# Card header #}
+    <div class="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <h2 class="font-display text-lg font-semibold tracking-tight truncate">r/{{ sub }}</h2>
+        {% if group.is_paused %}
+          <span class="badge badge-warning badge-outline badge-sm gap-1">
             <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-3.5 w-3.5"
+                 class="h-3 w-3"
                  fill="none"
                  viewBox="0 0 24 24"
                  stroke="currentColor"
-                 stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+                 stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6" />
             </svg>
-            {% translate "Resume" %}
-          {% else %}
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-3.5 w-3.5"
-                 fill="none"
-                 viewBox="0 0 24 24"
-                 stroke="currentColor"
-                 stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-            </svg>
-            {% translate "Pause" %}
-          {% endif %}
-        </button>
-      </form>
-      {# Delete group #}
-      <button class="btn btn-ghost btn-xs text-error gap-1"
-              @click="confirmDelete = true"
-              x-show="!confirmDelete"
-              title="{% translate 'Delete all monitors for this subreddit' %}">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-3.5 w-3.5"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor"
-             stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-        </svg>
-        {% translate "Delete" %}
-      </button>
-      {# Delete confirmation #}
-      <div x-show="confirmDelete" x-cloak class="flex items-center gap-1">
-        <span class="text-xs text-error font-medium">{% translate "Delete all?" %}</span>
+            {% translate "Paused" %}
+          </span>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        {# Pause / Resume #}
         <form method="post"
-              action="{% url 'tracking:monitor_delete_group' group.subreddit %}"
-              hx-post="{% url 'tracking:monitor_delete_group' group.subreddit %}"
+              action="{% url 'tracking:monitor_toggle_group' sub %}"
+              hx-post="{% url 'tracking:monitor_toggle_group' sub %}"
               hx-target="#dashboard-content"
               hx-swap="outerHTML"
               hx-indicator="#global-loading">
           {% csrf_token %}
-          <button type="submit" class="btn btn-error btn-xs">{% translate "Yes" %}</button>
-        </form>
-        <button class="btn btn-ghost btn-xs" @click="confirmDelete = false">{% translate "No" %}</button>
-      </div>
-    </div>
-  </div>
-  {# Monitors area #}
-  <div class="px-5 pb-3">
-    <div class="flex flex-wrap items-center gap-2">
-      {% for monitor in group.monitors %}
-        <div class="inline-flex items-stretch h-7 rounded-md overflow-hidden border border-base-300 {% if not monitor.is_active %}opacity-50{% endif %}">
-          <span class="inline-flex items-center px-2.5 text-sm font-semibold leading-none {% if monitor.match_mode == 'semantic' %}bg-secondary text-secondary-content{% elif monitor.match_mode == 'keyword_semantic' %}bg-accent text-accent-content{% else %}bg-primary text-primary-content{% endif %}">
-            {{ monitor.label }}
-          </span>
-          <form method="post"
-                action="{% url 'tracking:monitor_delete' monitor.pk %}"
-                hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
-                hx-target="#dashboard-content"
-                hx-swap="outerHTML"
-                hx-indicator="#global-loading"
-                class="inline-flex">
-            {% csrf_token %}
-            <button type="submit"
-                    class="inline-flex items-center justify-center w-6 bg-base-100 text-base-content/60 hover:bg-error hover:text-error-content transition-colors hover:cursor-pointer"
-                    title="{% blocktranslate with label=monitor.label %}Remove {{ label }}{% endblocktranslate %}">
+          <button type="submit"
+                  class="btn btn-ghost btn-xs gap-1"
+                  title="{% if group.is_paused %}{% translate 'Resume' %}{% else %}{% translate 'Pause' %}{% endif %}">
+            {% if group.is_paused %}
               <svg xmlns="http://www.w3.org/2000/svg"
-                   class="h-3 w-3"
+                   class="h-3.5 w-3.5"
                    fill="none"
                    viewBox="0 0 24 24"
                    stroke="currentColor"
-                   stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                   stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
               </svg>
-            </button>
-          </form>
-        </div>
-      {% endfor %}
-      {# Inline add keyword #}
-      <button class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-dashed border-base-300 text-xs font-medium text-base-content/50 hover:text-base-content hover:border-base-content/40 transition-colors hover:cursor-pointer"
-              x-show="!addingKeyword"
-              @click="addingKeyword = true; $nextTick(() => $refs.keywordInput.focus())">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-3 w-3"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor"
-             stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        {% translate "Add" %}
-      </button>
-      <form method="post"
-            action="{% url 'tracking:monitor_add_keyword' group.subreddit %}"
-            hx-post="{% url 'tracking:monitor_add_keyword' group.subreddit %}"
-            hx-target="#dashboard-content"
-            hx-swap="outerHTML"
-            hx-indicator="#global-loading"
-            x-show="addingKeyword"
-            x-cloak
-            class="inline-flex items-center gap-1.5"
-            @keydown.escape="addingKeyword = false; newKeyword = ''">
-        {% csrf_token %}
-        <input type="text"
-               name="keyword"
-               x-ref="keywordInput"
-               x-model="newKeyword"
-               class="input input-bordered input-xs h-7 w-32"
-               placeholder="{% translate 'keyword' %}"
-               maxlength="255"
-               required />
-        <button type="submit" class="btn btn-primary btn-xs h-7 min-h-7">{% translate "Add" %}</button>
-        <button type="button"
-                class="btn btn-ghost btn-xs h-7 min-h-7"
-                @click="addingKeyword = false; newKeyword = ''">
+              {% translate "Resume" %}
+            {% else %}
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="h-3.5 w-3.5"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor"
+                   stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+              </svg>
+              {% translate "Pause" %}
+            {% endif %}
+          </button>
+        </form>
+        {# Delete group #}
+        <button class="btn btn-ghost btn-xs text-error gap-1"
+                @click="confirmDelete = true"
+                x-show="!confirmDelete"
+                title="{% translate 'Delete all monitors for this subreddit' %}">
           <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-3 w-3"
+               class="h-3.5 w-3.5"
                fill="none"
                viewBox="0 0 24 24"
                stroke="currentColor"
-               stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+               stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
           </svg>
+          {% translate "Delete" %}
         </button>
-      </form>
+        {# Delete confirmation #}
+        <div x-show="confirmDelete" x-cloak class="flex items-center gap-1">
+          <span class="text-xs text-error font-medium">{% translate "Delete all?" %}</span>
+          <form method="post"
+                action="{% url 'tracking:monitor_delete_group' sub %}"
+                hx-post="{% url 'tracking:monitor_delete_group' sub %}"
+                hx-target="#dashboard-content"
+                hx-swap="outerHTML"
+                hx-indicator="#global-loading">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-error btn-xs">{% translate "Yes" %}</button>
+          </form>
+          <button class="btn btn-ghost btn-xs" @click="confirmDelete = false">{% translate "No" %}</button>
+        </div>
+      </div>
     </div>
-  </div>
-  {# Footer: notification cadence #}
-  <div class="border-t border-base-300 px-5 py-3 bg-base-200/50 flex items-center justify-between">
-    <form method="post"
-          action="{% url 'tracking:monitor_update_cadence' group.subreddit %}"
-          hx-post="{% url 'tracking:monitor_update_cadence' group.subreddit %}"
-          hx-target="#dashboard-content"
-          hx-swap="outerHTML"
-          hx-indicator="#global-loading"
-          class="flex items-center gap-2"
-          x-data>
-      {% csrf_token %}
-      <label class="text-sm text-base-content/60 font-medium whitespace-nowrap">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-4 w-4 inline-block mr-0.5 -mt-0.5"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor"
-             stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-        </svg>
-        {% translate "Notify" %}
-      </label>
-      <select name="cadence"
-              class="select select-bordered select-xs"
-              @change="$el.closest('form').requestSubmit()">
-        {% for value, label in cadence_choices %}
-          <option value="{{ value }}"
-                  {% if value == group.notification_cadence %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </form>
-    <span class="text-xs text-base-content/40">
-      {% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}
-    </span>
-  </div>
-</article>
+    {# Sections #}
+    <div class="px-5 pb-3 space-y-4">
+      {# Keywords section #}
+      {% include "tracking/_monitor_section_keywords.html" with sub=sub monitors=group.keyword_monitors inline_error=add_err %}
+      {# Semantic section #}
+      {% include "tracking/_monitor_section_semantic.html" with sub=sub monitors=group.semantic_monitors mode="semantic" section_label="Semantic" add_label="add semantic monitor" inline_error=add_err %}
+      {# Hybrid section #}
+      {% include "tracking/_monitor_section_semantic.html" with sub=sub monitors=group.hybrid_monitors mode="keyword_semantic" section_label="Keyword + Semantic" add_label="add hybrid monitor" inline_error=add_err %}
+    </div>
+    {# Footer: notification cadence #}
+    <div class="border-t border-base-300 px-5 py-3 bg-base-200/50 flex items-center justify-between">
+      <form method="post"
+            action="{% url 'tracking:monitor_update_cadence' sub %}"
+            hx-post="{% url 'tracking:monitor_update_cadence' sub %}"
+            hx-target="#dashboard-content"
+            hx-swap="outerHTML"
+            hx-indicator="#global-loading"
+            class="flex items-center gap-2"
+            x-data>
+        {% csrf_token %}
+        <label class="text-sm text-base-content/60 font-medium whitespace-nowrap">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-4 w-4 inline-block mr-0.5 -mt-0.5"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor"
+               stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          </svg>
+          {% translate "Notify" %}
+        </label>
+        <select name="cadence"
+                class="select select-bordered select-xs"
+                @change="$el.closest('form').requestSubmit()">
+          {% for value, label in cadence_choices %}
+            <option value="{{ value }}"
+                    {% if value == group.notification_cadence %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <span class="text-xs text-base-content/40">
+        {% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}
+      </span>
+    </div>
+  </article>
+{% endwith %}

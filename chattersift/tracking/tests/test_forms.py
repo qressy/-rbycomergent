@@ -3,7 +3,9 @@ from __future__ import annotations
 from chattersift.alerts.models import NotificationCadence
 from chattersift.tracking.forms import MATCH_RETENTION_DEFAULT_DAYS
 from chattersift.tracking.forms import MatchRetentionForm
+from chattersift.tracking.forms import MonitorAddForm
 from chattersift.tracking.forms import MonitorBatchForm
+from chattersift.tracking.forms import MonitorEditForm
 
 
 def test_monitor_batch_form_normalizes_subreddit_prefix() -> None:
@@ -99,3 +101,58 @@ def test_match_retention_form_rejects_tampered_value() -> None:
 
     assert not form.is_valid()
     assert "retention_days" in form.errors
+
+
+def test_monitor_add_form_keyword_mode_requires_keyword() -> None:
+    form = MonitorAddForm(data={"match_mode": "keyword", "keyword": ""})
+
+    assert not form.is_valid()
+    assert "keyword" in form.errors
+
+
+def test_monitor_add_form_keyword_mode_accepts_keyword() -> None:
+    form = MonitorAddForm(data={"match_mode": "keyword", "keyword": "htmx"})
+
+    assert form.is_valid()
+    assert form.cleaned_data["keyword"] == "htmx"
+
+
+def test_monitor_add_form_semantic_mode_requires_description(settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    form = MonitorAddForm(data={"match_mode": "semantic", "semantic_description": ""})
+
+    assert not form.is_valid()
+    assert "semantic_description" in form.errors
+
+
+def test_monitor_add_form_semantic_mode_accepts_description(settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    form = MonitorAddForm(
+        data={"match_mode": "semantic", "semantic_description": "Posts about deployment"},
+    )
+
+    assert form.is_valid()
+    assert form.cleaned_data["semantic_description"] == "Posts about deployment"
+
+
+def test_monitor_add_form_hybrid_mode_requires_both_fields(settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    form = MonitorAddForm(data={"match_mode": "keyword_semantic"})
+
+    assert not form.is_valid()
+    assert "keyword" in form.errors
+    assert "semantic_description" in form.errors
+
+
+def test_monitor_add_form_rejects_semantic_when_llm_model_missing(settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = ""
+    form = MonitorAddForm(
+        data={"match_mode": "semantic", "semantic_description": "Posts about deployment"},
+    )
+
+    assert not form.is_valid()
+    assert "semantic_description" in form.errors
+
+
+def test_monitor_edit_form_has_same_fields_as_add_form() -> None:
+    assert set(MonitorEditForm.base_fields) == set(MonitorAddForm.base_fields)

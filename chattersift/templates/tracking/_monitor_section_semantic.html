@@ -1,0 +1,70 @@
+{% load i18n %}
+
+{# Semantic or hybrid sub-section: row list with edit-in-place + inline add. #}
+{# Expected context: sub, monitors, mode ('semantic'|'keyword_semantic'), section_label, add_label, inline_error. #}
+<section x-data="{ adding: false, newKeyword: '', newPrompt: '' }"
+         {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == mode %}x-init="adding = true"{% endif %}>
+  <header class="flex items-center gap-2 mb-1.5">
+    <h3 class="text-xs uppercase tracking-wide text-base-content/50 font-semibold">{{ section_label }}</h3>
+  </header>
+  <div class="space-y-1.5">
+    {% for monitor in monitors %}
+      {% include "tracking/_monitor_row.html" with monitor=monitor mode=mode inline_error=inline_error %}
+    {% endfor %}
+    {# Inline add affordance #}
+    <button type="button"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors hover:cursor-pointer"
+            x-show="!adding"
+            @click="adding = true; newKeyword = ''; newPrompt = ''; $nextTick(() => $refs.addPrompt && $refs.addPrompt.focus())">
+      <svg xmlns="http://www.w3.org/2000/svg"
+           class="h-3 w-3"
+           fill="none"
+           viewBox="0 0 24 24"
+           stroke="currentColor"
+           stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      {{ add_label }}
+    </button>
+    <div x-show="adding"
+         x-cloak
+         class="rounded-md border {% if mode == 'semantic' %}border-secondary/40 bg-secondary/5{% else %}border-accent/40 bg-accent/5{% endif %} p-2.5">
+      <form method="post"
+            action="{% url 'tracking:monitor_add' sub %}"
+            hx-post="{% url 'tracking:monitor_add' sub %}"
+            hx-target="#dashboard-content"
+            hx-swap="outerHTML"
+            hx-indicator="#global-loading"
+            class="flex flex-col gap-2"
+            @keydown.escape="adding = false; newKeyword = ''; newPrompt = ''">
+        {% csrf_token %}
+        <input type="hidden" name="match_mode" value="{{ mode }}" />
+        {% if mode == 'keyword_semantic' %}
+          <input type="text"
+                 name="keyword"
+                 x-model="newKeyword"
+                 class="input input-bordered input-xs h-7 w-full"
+                 placeholder="{% translate 'keyword' %}"
+                 maxlength="255"
+                 required />
+        {% endif %}
+        <textarea name="semantic_description"
+                  x-ref="addPrompt"
+                  x-model="newPrompt"
+                  class="textarea textarea-bordered textarea-sm w-full min-h-16 leading-snug"
+                  placeholder="{% translate 'Describe what should match…' %}"
+                  maxlength="2000"
+                  required></textarea>
+        <div class="flex items-center justify-end gap-1.5">
+          <button type="button"
+                  class="btn btn-ghost btn-xs"
+                  @click="adding = false; newKeyword = ''; newPrompt = ''">{% translate "Cancel" %}</button>
+          <button type="submit" class="btn btn-primary btn-xs">{% translate "Add" %}</button>
+        </div>
+        {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == mode %}
+          <p class="text-xs text-error">{{ inline_error.message }}</p>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</section>

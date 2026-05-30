@@ -366,6 +366,143 @@ def test_matches_page_no_matches_for_selected_subreddit_state(client, user) -> N
     assert "No matches for this subreddit" in response.content.decode()
 
 
+def test_monitor_add_creates_keyword_monitor(client, user) -> None:
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="postgres")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_add", kwargs={"subreddit": "django"}),
+        {"match_mode": "keyword", "keyword": "htmx"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert Monitor.objects.filter(user=user, subreddit="django", keyword="htmx").exists()
+
+
+def test_monitor_add_creates_semantic_monitor(client, user, settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="postgres")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_add", kwargs={"subreddit": "django"}),
+        {"match_mode": "semantic", "semantic_description": "Posts about deployment pain"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    semantic = Monitor.objects.get(user=user, subreddit="django", match_mode="semantic")
+    assert semantic.semantic_description == "Posts about deployment pain"
+
+
+def test_monitor_add_creates_hybrid_monitor(client, user, settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="postgres")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_add", kwargs={"subreddit": "django"}),
+        {
+            "match_mode": "keyword_semantic",
+            "keyword": "payments",
+            "semantic_description": "Refund complaints",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    hybrid = Monitor.objects.get(user=user, subreddit="django", match_mode="keyword_semantic")
+    assert hybrid.keyword == "payments"
+    assert hybrid.semantic_description == "Refund complaints"
+
+
+def test_monitor_add_shows_inline_error_on_duplicate(client, user) -> None:
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_add", kwargs={"subreddit": "django"}),
+        {"match_mode": "keyword", "keyword": "htmx"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert Monitor.objects.filter(user=user, subreddit="django", keyword="htmx").count() == 1
+    assert "already exists" in response.content.decode()
+
+
+def test_monitor_edit_renames_keyword(client, user) -> None:
+    monitor = Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_edit", kwargs={"pk": monitor.pk}),
+        {"match_mode": "keyword", "keyword": "postgres"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    monitor.refresh_from_db()
+    assert monitor.keyword == "postgres"
+
+
+def test_monitor_edit_updates_semantic_description(client, user, settings) -> None:
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit="django",
+        match_mode="semantic",
+        semantic_description="old prompt",
+        semantic_fingerprint="oldfp",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_edit", kwargs={"pk": monitor.pk}),
+        {"match_mode": "semantic", "semantic_description": "new prompt about caches"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    monitor.refresh_from_db()
+    assert monitor.semantic_description == "new prompt about caches"
+    assert monitor.semantic_fingerprint != "oldfp"
+
+
+def test_monitor_edit_inline_error_on_duplicate_keyword(client, user) -> None:
+    Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="postgres")
+    target = Monitor.objects.create(user=user, subreddit="django", match_mode="keyword", keyword="htmx")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_edit", kwargs={"pk": target.pk}),
+        {"match_mode": "keyword", "keyword": "postgres"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    target.refresh_from_db()
+    assert target.keyword == "htmx"
+    assert "already exists" in response.content.decode()
+
+
+def test_monitor_edit_rejects_other_users_monitor(client, user) -> None:
+    other = UserFactory()
+    other_monitor = Monitor.objects.create(user=other, subreddit="django", match_mode="keyword", keyword="htmx")
+    client.force_login(user)
+
+    response = client.post(
+        reverse("tracking:monitor_edit", kwargs={"pk": other_monitor.pk}),
+        {"match_mode": "keyword", "keyword": "postgres"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    other_monitor.refresh_from_db()
+    assert other_monitor.keyword == "htmx"
+
+
 def _create_match(
     monitor: Monitor,
     *,

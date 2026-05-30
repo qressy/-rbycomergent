@@ -34,6 +34,10 @@ User = get_user_model()
 DEFAULT_MATCH_RETENTION_DAYS = 30
 
 
+class MonitorAlreadyExistsError(Exception):
+    """Raised when an add or edit would create a duplicate monitor in a group."""
+
+
 @dataclass(frozen=True)
 class DashboardMatch:
     """Presents one Reddit item with all active matched monitor labels."""
@@ -54,6 +58,9 @@ class DashboardSubredditGroup:
 
     subreddit: str
     monitors: tuple[Monitor, ...]
+    keyword_monitors: tuple[Monitor, ...]
+    semantic_monitors: tuple[Monitor, ...]
+    hybrid_monitors: tuple[Monitor, ...]
     matches: tuple[DashboardMatch, ...]
     notification_cadence: str
     is_paused: bool
@@ -194,32 +201,115 @@ def upsert_monitors(  # noqa: PLR0913
     return monitors
 
 
-def add_keyword_to_subreddit(*, user: User, subreddit: str, keyword: str) -> Monitor:
-    """Adds a single keyword monitor to an existing subreddit group."""
+@transaction.atomic
+def add_monitor_to_subreddit(
+    *,
+    user: User,
+    subreddit: str,
+    match_mode: str,
+    keyword: str = "",
+    semantic_description: str = "",
+) -> Monitor:
+    """Adds one monitor of any type to an existing subreddit group.
 
-    normalized = subreddit.casefold()
-    monitor = Monitor.objects.filter(
-        user=user,
-        subreddit=normalized,
-        match_mode=MonitorMatchMode.KEYWORD,
-        keyword__iexact=keyword,
-        semantic_fingerprint="",
-    ).first()
-    if monitor is None:
-        # Copy cadence from existing monitors in this group
-        existing = Monitor.objects.filter(user=user, subreddit=normalized).first()
-        cadence = existing.notification_cadence if existing else NotificationCadence.THIRTY_MINUTES
-        monitor = Monitor.objects.create(
+    Raises MonitorAlreadyExistsError if an active duplicate already exists in the group.
+    Reactivates an inactive duplicate in place if one exists.
+    """
+
+    mode = MonitorMatchMode(match_mode)
+    normalized_subreddit = subreddit.casefold()
+    normalized_description = normalize_semantic_description(semantic_description)
+    fingerprint = semantic_description_fingerprint(normalized_description)
+    effective_keyword = "" if mode == MonitorMatchMode.SEMANTIC else keyword
+
+    existing = (
+        Monitor.objects.select_for_update()
+        .filter(
             user=user,
-            subreddit=normalized,
-            match_mode=MonitorMatchMode.KEYWORD,
-            keyword=keyword,
-            notification_cadence=cadence,
+            subreddit=normalized_subreddit,
+            match_mode=mode,
+            keyword__iexact=effective_keyword,
+            semantic_fingerprint=fingerprint,
         )
-        ensure_email_delivery_state(user=user, cadence=cadence)
-    elif not monitor.is_active:
-        monitor.is_active = True
-        monitor.save(update_fields=["is_active", "updated_at"])
+        .first()
+    )
+    if existing is not None:
+        if existing.is_active:
+            raise MonitorAlreadyExistsError
+        existing.is_active = True
+        if mode != MonitorMatchMode.KEYWORD:
+            existing.semantic_description = normalized_description
+        existing.save(update_fields=["is_active", "semantic_description", "updated_at"])
+        return existing
+
+    # Copy cadence from any existing monitors in this group
+    other = Monitor.objects.filter(user=user, subreddit=normalized_subreddit).first()
+    cadence = other.notification_cadence if other else NotificationCadence.THIRTY_MINUTES
+    monitor = Monitor.objects.create(
+        user=user,
+        subreddit=normalized_subreddit,
+        match_mode=mode,
+        keyword=effective_keyword,
+        semantic_description=normalized_description,
+        semantic_fingerprint=fingerprint,
+        notification_cadence=cadence,
+    )
+    ensure_email_delivery_state(user=user, cadence=cadence)
+    return monitor
+
+
+@transaction.atomic
+def update_monitor(
+    *,
+    user: User,
+    pk: int,
+    match_mode: str,
+    keyword: str = "",
+    semantic_description: str = "",
+) -> Monitor:
+    """Updates one monitor's mode and content.
+
+    Raises MonitorAlreadyExistsError if the new (mode, keyword, semantic_fingerprint)
+    tuple already exists for another monitor in the same subreddit group.
+    Raises Monitor.DoesNotExist if the pk is missing or not owned by `user`.
+    """
+
+    monitor = Monitor.objects.select_for_update().filter(pk=pk, user=user).first()
+    if monitor is None:
+        raise Monitor.DoesNotExist
+
+    mode = MonitorMatchMode(match_mode)
+    normalized_description = normalize_semantic_description(semantic_description)
+    fingerprint = semantic_description_fingerprint(normalized_description)
+    effective_keyword = "" if mode == MonitorMatchMode.SEMANTIC else keyword
+
+    clash = (
+        Monitor.objects.filter(
+            user=user,
+            subreddit=monitor.subreddit,
+            match_mode=mode,
+            keyword__iexact=effective_keyword,
+            semantic_fingerprint=fingerprint,
+        )
+        .exclude(pk=pk)
+        .exists()
+    )
+    if clash:
+        raise MonitorAlreadyExistsError
+
+    monitor.match_mode = mode
+    monitor.keyword = effective_keyword
+    monitor.semantic_description = normalized_description
+    monitor.semantic_fingerprint = fingerprint
+    monitor.save(
+        update_fields=[
+            "match_mode",
+            "keyword",
+            "semantic_description",
+            "semantic_fingerprint",
+            "updated_at",
+        ],
+    )
     return monitor
 
 
@@ -337,6 +427,9 @@ def build_dashboard_groups(
         DashboardSubredditGroup(
             subreddit=subreddit,
             monitors=tuple(monitors),
+            keyword_monitors=tuple(m for m in monitors if m.match_mode == MonitorMatchMode.KEYWORD),
+            semantic_monitors=tuple(m for m in monitors if m.match_mode == MonitorMatchMode.SEMANTIC),
+            hybrid_monitors=tuple(m for m in monitors if m.match_mode == MonitorMatchMode.KEYWORD_SEMANTIC),
             matches=tuple(matches_by_subreddit.get(subreddit, [])),
             notification_cadence=cast("str", monitors[0].notification_cadence) if monitors else NotificationCadence.OFF,
             is_paused=all(not m.is_active for m in monitors),
