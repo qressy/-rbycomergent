@@ -42,18 +42,38 @@
         {% include "tracking/_matches_feed_item.html" with item=item %}
       {% endfor %}
     </div>
-    <nav class="cs-matches-pager">
+    <nav class="cs-matches-pager"
+         aria-label="{% translate 'Matches pagination' %}">
       <div class="cs-matches-pager__status">
         {% blocktranslate with page=feed.page total_pages=feed.total_pages %}Page {{ page }} of {{ total_pages }}{% endblocktranslate %}
       </div>
-      <div class="flex gap-2">
-        <a class="btn btn-sm btn-ghost"
+      <div class="cs-matches-pager__controls">
+        <a class="cs-matches-pager__step"
+           aria-label="{% translate 'Previous page' %}"
            {% if feed.has_previous %} href="{% url 'tracking:matches' %}{{ previous_page_url }}" hx-get="{% url 'tracking:matches' %}{{ previous_page_url }}" hx-target="#dash-content" hx-push-url="true" hx-indicator="#global-loading" {% else %} aria-disabled="true" {% endif %}>
-          {% translate "Previous" %}
+          <span class="cs-matches-pager__step-label">{% translate "Prev" %}</span>
         </a>
-        <a class="btn btn-sm btn-ghost"
+        <ol class="cs-matches-pager__list" role="list">
+          {% for link in page_links %}
+            {% if link.is_ellipsis %}
+              <li class="cs-matches-pager__ellipsis" aria-hidden="true">...</li>
+            {% else %}
+              <li>
+                <a class="cs-matches-pager__page{% if link.is_current %} is-current{% endif %}"
+                   {% if link.is_current %}aria-current="page"{% endif %}
+                   href="{% url 'tracking:matches' %}{{ link.url }}"
+                   hx-get="{% url 'tracking:matches' %}{{ link.url }}"
+                   hx-target="#dash-content"
+                   hx-push-url="true"
+                   hx-indicator="#global-loading">{{ link.page }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+        <a class="cs-matches-pager__step"
+           aria-label="{% translate 'Next page' %}"
            {% if feed.has_next %} href="{% url 'tracking:matches' %}{{ next_page_url }}" hx-get="{% url 'tracking:matches' %}{{ next_page_url }}" hx-target="#dash-content" hx-push-url="true" hx-indicator="#global-loading" {% else %} aria-disabled="true" {% endif %}>
-          {% translate "Next" %}
+          <span class="cs-matches-pager__step-label">{% translate "Next" %}</span>
         </a>
       </div>
     </nav>

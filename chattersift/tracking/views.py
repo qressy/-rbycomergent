@@ -221,6 +221,11 @@ def matches(request: HttpRequest) -> HttpResponse:
         subreddit=feed.selected_subreddit,
         page=feed.page + 1,
     )
+    page_links = _matches_page_links(
+        subreddit=feed.selected_subreddit,
+        current_page=feed.page,
+        total_pages=feed.total_pages,
+    )
 
     context = {
         "feed": feed,
@@ -228,6 +233,7 @@ def matches(request: HttpRequest) -> HttpResponse:
         "has_monitors": bool(feed.subreddit_options),
         "previous_page_url": previous_page_url,
         "next_page_url": next_page_url,
+        "page_links": page_links,
         "dash_active_nav": "matches",
     }
     if request.headers.get("HX-Request"):
@@ -344,6 +350,47 @@ def _matches_query_url(*, subreddit: str | None, page: int) -> str:
     if not query_string:
         return ""
     return f"?{query_string}"
+
+
+def _matches_page_links(
+    *,
+    subreddit: str | None,
+    current_page: int,
+    total_pages: int,
+) -> tuple[dict[str, object], ...]:
+    """Build numbered pager links with ellipses for jumping across pages.
+
+    Always shows the first and last page, the current page, and one neighbour
+    on either side. Inserts ellipsis markers across gaps so the pager stays
+    compact regardless of total_pages.
+    """
+    if total_pages <= 1:
+        return ()
+    visible = sorted(
+        {
+            1,
+            total_pages,
+            current_page - 1,
+            current_page,
+            current_page + 1,
+        },
+    )
+    visible = [p for p in visible if 1 <= p <= total_pages]
+    links: list[dict[str, object]] = []
+    previous_page = 0
+    for page_number in visible:
+        if page_number - previous_page > 1:
+            links.append({"is_ellipsis": True})
+        links.append(
+            {
+                "page": page_number,
+                "url": _matches_query_url(subreddit=subreddit, page=page_number),
+                "is_current": page_number == current_page,
+                "is_ellipsis": False,
+            },
+        )
+        previous_page = page_number
+    return tuple(links)
 
 
 def _positive_int_or_default(raw_value: str | None, *, default: int) -> int:
