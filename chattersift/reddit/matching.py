@@ -155,16 +155,18 @@ class SemanticRedditMatcher(RedditMatcher):
             invalid_json = "Semantic matcher returned invalid JSON."
             raise SemanticMatchError(invalid_json) from error
 
-        if not isinstance(parsed, dict) or not isinstance(parsed.get("matched"), bool):
-            invalid_shape = "Semantic matcher returned an invalid decision shape."
+        if not isinstance(parsed, dict):
+            invalid_shape = "Semantic matcher returned an invalid decision shape: expected a JSON object."
             raise SemanticMatchError(invalid_shape)
+
+        matched = _semantic_matched_value(parsed)
 
         confidence = _bounded_confidence(parsed.get("confidence"))
         reason = str(parsed.get("reason") or "semantic:decision")[:500]
         return MatchDecision(
             monitor_id=monitor_id,
             reddit_id=request.item.reddit_id,
-            matched=parsed["matched"],
+            matched=matched,
             confidence=confidence,
             match_mode=request.intent.match_mode,
             reason=reason,
@@ -371,12 +373,36 @@ def _completion_content(response) -> str:
     return content
 
 
+def _semantic_matched_value(parsed: dict[str, object]) -> bool:
+    """Return the semantic match boolean from a model decision object."""
+    if "matched" not in parsed:
+        keys = ", ".join(sorted(str(key) for key in parsed)) or "-"
+        invalid_shape = f"Semantic matcher returned an invalid decision shape: missing 'matched' key; keys={keys}."
+        raise SemanticMatchError(invalid_shape)
+
+    matched = parsed["matched"]
+    if isinstance(matched, bool):
+        return matched
+    if isinstance(matched, str):
+        normalized = matched.strip().casefold()
+        if normalized == "true":
+            return True
+        if normalized == "false":
+            return False
+
+    invalid_shape = (
+        "Semantic matcher returned an invalid decision shape: "
+        f"'matched' must be a boolean; got {type(matched).__name__}."
+    )
+    raise SemanticMatchError(invalid_shape)
+
+
 def _bounded_confidence(value: object) -> float | None:
     """Coerce model confidence to the persisted 0.0-1.0 range."""
     if value is None or not isinstance(value, int | float | str):
         return None
     try:
         confidence = float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return None
     return max(0.0, min(confidence, 1.0))

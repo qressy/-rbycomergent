@@ -3,11 +3,14 @@ from __future__ import annotations
 from datetime import UTC
 from datetime import datetime
 
+import pytest
+
 from chattersift.reddit.contracts import MatchRequest
 from chattersift.reddit.contracts import MonitorIntent
 from chattersift.reddit.contracts import MonitorMatchMode
 from chattersift.reddit.contracts import RedditItemPayload
 from chattersift.reddit.matching import KeywordRedditMatcher
+from chattersift.reddit.matching import SemanticMatchError
 from chattersift.reddit.matching import SemanticRedditMatcher
 from chattersift.reddit.matching import build_match_requests
 from chattersift.reddit.matching import evaluate_match_requests
@@ -138,6 +141,66 @@ def test_semantic_matcher_parses_litellm_json_response(monkeypatch, settings) ->
     assert decision.confidence == SEMANTIC_RESPONSE_CONFIDENCE
     assert decision.match_mode == MonitorMatchMode.SEMANTIC
     assert decision.reason == "incident"
+
+
+def test_semantic_matcher_accepts_string_boolean_from_litellm(monkeypatch, settings) -> None:
+    """Semantic matching tolerates provider responses with JSON string booleans."""
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    intent = MonitorIntent(
+        subreddit="django",
+        keywords=(),
+        match_mode=MonitorMatchMode.SEMANTIC,
+        semantic_description="Django deployment incidents",
+        monitor_id=MONITOR_ID,
+    )
+    item = RedditItemPayload(
+        reddit_id="t3_semantic_string_bool",
+        item_type=RedditItem.RedditItemType.POST,
+        subreddit="django",
+        permalink="https://www.reddit.com/r/django/comments/semantic-string-bool/example/",
+        occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
+        title="Production outage",
+        body="A Django deployment failed after a migration.",
+    )
+
+    def fake_completion(**kwargs):
+        return {"choices": [{"message": {"content": '{"matched": "true", "confidence": "0.82"}'}}]}
+
+    monkeypatch.setattr("chattersift.reddit.matching.completion", fake_completion)
+
+    decision = SemanticRedditMatcher().evaluate(MatchRequest(intent=intent, item=item))
+
+    assert decision.matched is True
+    assert decision.confidence == SEMANTIC_RESPONSE_CONFIDENCE
+
+
+def test_semantic_matcher_invalid_shape_error_includes_reason(monkeypatch, settings) -> None:
+    """Invalid semantic decision diagnostics identify the failed contract field."""
+    settings.CHATTERSIFT_SEMANTIC_LLM_MODEL = "openai/gpt-4o-mini"
+    intent = MonitorIntent(
+        subreddit="django",
+        keywords=(),
+        match_mode=MonitorMatchMode.SEMANTIC,
+        semantic_description="Django deployment incidents",
+        monitor_id=MONITOR_ID,
+    )
+    item = RedditItemPayload(
+        reddit_id="t3_semantic_invalid_shape",
+        item_type=RedditItem.RedditItemType.POST,
+        subreddit="django",
+        permalink="https://www.reddit.com/r/django/comments/semantic-invalid-shape/example/",
+        occurred_at=datetime(2026, 5, 5, tzinfo=UTC),
+        title="Production outage",
+        body="A Django deployment failed after a migration.",
+    )
+
+    def fake_completion(**kwargs):
+        return {"choices": [{"message": {"content": '{"matched": "yes", "confidence": 0.82}'}}]}
+
+    monkeypatch.setattr("chattersift.reddit.matching.completion", fake_completion)
+
+    with pytest.raises(SemanticMatchError, match="'matched' must be a boolean; got str"):
+        SemanticRedditMatcher().evaluate(MatchRequest(intent=intent, item=item))
 
 
 def test_keyword_semantic_skips_semantic_call_when_keyword_misses() -> None:
