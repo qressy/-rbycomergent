@@ -5,6 +5,9 @@ set -o pipefail
 set -o nounset
 
 
-python /app/manage.py collectstatic --noinput --ignore 'src/*'
-
-exec gunicorn config.asgi --bind 0.0.0.0:5000 --chdir=/app -k uvicorn_worker.UvicornWorker
+# Interface: WEB_CONCURRENCY controls Django memory use on small VPS deployments.
+exec gunicorn config.asgi \
+  --bind 0.0.0.0:5000 \
+  --chdir=/app \
+  --workers "${WEB_CONCURRENCY:-1}" \
+  -k uvicorn_worker.UvicornWorker

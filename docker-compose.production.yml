@@ -8,34 +8,35 @@ volumes:
   production_redis_data: {}
 
 
+x-django: &django
+  image: chattersift_production_django
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  env_file:
+    - ./.env.production
+  command: /start
+  healthcheck:
+    test:
+      - CMD
+      - python
+      - -c
+      - "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:5000/healthz/', headers={'Host': os.environ['CHATTERSIFT_SITE_DOMAIN'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=5)"
+    interval: 5s
+    timeout: 5s
+    retries: 3
+    start_period: 5s
 
 services:
-  django: &django
+  django:
+    <<: *django
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
-
-    image: chattersift_production_django
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file:
-      - ./.env.production
-    command: /start
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:5000/healthz/', headers={'Host': os.environ['CHATTERSIFT_SITE_DOMAIN'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=5)"
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   postgres:
     build:
@@ -49,18 +50,19 @@ services:
       - ./.env.production
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
+      interval: 2s
+      timeout: 3s
       retries: 5
 
   migrate:
     <<: *django
-    image: chattersift_production_migrate
+    image: chattersift_production_django
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Interface: deployment-time Django setup that must complete before long-running app processes start.
     command: bash -c "python /app/manage.py migrate --noinput && python /app/manage.py sync_site_domain"
     restart: "no"
     healthcheck:
@@ -91,21 +93,21 @@ services:
       - production_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 2s
+      timeout: 3s
       retries: 5
 
 
   celeryworker:
     <<: *django
-    image: chattersift_production_celeryworker
+    image: chattersift_production_django
     command: /start-celeryworker
     healthcheck:
       disable: true
 
   celerybeat:
     <<: *django
-    image: chattersift_production_celerybeat
+    image: chattersift_production_django
     command: /start-celerybeat
     healthcheck:
       disable: true

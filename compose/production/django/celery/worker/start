@@ -5,4 +5,5 @@ set -o pipefail
 set -o nounset
 
 
-exec celery -A config.celery_app worker -l INFO
+# Interface: CELERY_WORKER_CONCURRENCY controls worker memory use on small VPS deployments.
+exec celery -A config.celery_app worker -l INFO --concurrency="${CELERY_WORKER_CONCURRENCY:-1}"
