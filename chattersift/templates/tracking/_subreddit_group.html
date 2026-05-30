@@ -5,8 +5,11 @@
            x-data="{ confirmDelete: false }">
     {# Card header #}
     <div class="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
-      <div class="flex items-center gap-2.5 min-w-0">
+      <div class="flex items-baseline gap-3 min-w-0">
         <h2 class="font-display text-lg font-semibold tracking-tight truncate">r/{{ sub }}</h2>
+        <span class="text-xs text-base-content/40 whitespace-nowrap">
+          {% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}
+        </span>
         {% if group.is_paused %}
           <span class="badge badge-warning badge-outline badge-sm gap-1">
             <svg xmlns="http://www.w3.org/2000/svg"
@@ -88,7 +91,7 @@
       </div>
     </div>
     {# Sections #}
-    <div class="px-5 pb-3 space-y-4">
+    <div class="px-5 pb-4 pt-1 space-y-5">
       {# Keywords section #}
       {% include "tracking/_monitor_section_keywords.html" with sub=sub monitors=group.keyword_monitors inline_error=add_err %}
       {# Semantic section #}
@@ -97,7 +100,7 @@
       {% include "tracking/_monitor_section_semantic.html" with sub=sub monitors=group.hybrid_monitors mode="keyword_semantic" section_label="Keyword + Semantic" add_label="add hybrid monitor" inline_error=add_err %}
     </div>
     {# Footer: notification cadence #}
-    <div class="border-t border-base-300 px-5 py-3 bg-base-200/50 flex items-center justify-between">
+    <div class="border-t border-base-300 px-5 py-3 bg-base-200/50 flex items-center">
       <form method="post"
             action="{% url 'tracking:monitor_update_cadence' sub %}"
             hx-post="{% url 'tracking:monitor_update_cadence' sub %}"
@@ -127,9 +130,6 @@
           {% endfor %}
         </select>
       </form>
-      <span class="text-xs text-base-content/40">
-        {% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}
-      </span>
     </div>
   </article>
 {% endwith %}

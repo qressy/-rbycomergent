@@ -4,8 +4,8 @@
 {# Expected context: sub, monitors, mode ('semantic'|'keyword_semantic'), section_label, add_label, inline_error. #}
 <section x-data="{ adding: false, newKeyword: '', newPrompt: '' }"
          {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == mode %}x-init="adding = true"{% endif %}>
-  <header class="flex items-center gap-2 mb-1.5">
-    <h3 class="text-xs uppercase tracking-wide text-base-content/50 font-semibold">{{ section_label }}</h3>
+  <header class="flex items-center gap-2 mb-2">
+    <h3 class="text-[11px] uppercase tracking-[0.1em] text-base-content/45 font-semibold">{{ section_label }}</h3>
   </header>
   <div class="space-y-1.5">
     {% for monitor in monitors %}
@@ -13,11 +13,11 @@
     {% endfor %}
     {# Inline add affordance #}
     <button type="button"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors hover:cursor-pointer"
+            class="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors hover:cursor-pointer"
             x-show="!adding"
             @click="adding = true; newKeyword = ''; newPrompt = ''; $nextTick(() => $refs.addPrompt && $refs.addPrompt.focus())">
       <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-3 w-3"
+           class="h-3.5 w-3.5"
            fill="none"
            viewBox="0 0 24 24"
            stroke="currentColor"
@@ -26,16 +26,17 @@
       </svg>
       {{ add_label }}
     </button>
+    {# Editor card: unified neutral background; type-colored left border matches the saved row that will appear here. #}
     <div x-show="adding"
          x-cloak
-         class="rounded-md border {% if mode == 'semantic' %}border-secondary/40 bg-secondary/5{% else %}border-accent/40 bg-accent/5{% endif %} p-2.5">
+         class="rounded-md border border-base-300 border-l-4 bg-base-200/60 p-3 {% if mode == 'semantic' %}border-l-secondary{% else %}border-l-accent{% endif %}">
       <form method="post"
             action="{% url 'tracking:monitor_add' sub %}"
             hx-post="{% url 'tracking:monitor_add' sub %}"
             hx-target="#dashboard-content"
             hx-swap="outerHTML"
             hx-indicator="#global-loading"
-            class="flex flex-col gap-2"
+            class="flex flex-col gap-2.5"
             @keydown.escape="adding = false; newKeyword = ''; newPrompt = ''">
         {% csrf_token %}
         <input type="hidden" name="match_mode" value="{{ mode }}" />
@@ -43,23 +44,23 @@
           <input type="text"
                  name="keyword"
                  x-model="newKeyword"
-                 class="input input-bordered input-xs h-7 w-full"
-                 placeholder="{% translate 'keyword' %}"
+                 class="input input-bordered input-xs h-7 w-full text-sm"
+                 placeholder="{% translate 'Keyword to match first…' %}"
                  maxlength="255"
                  required />
         {% endif %}
         <textarea name="semantic_description"
                   x-ref="addPrompt"
                   x-model="newPrompt"
-                  class="textarea textarea-bordered textarea-sm w-full min-h-16 leading-snug"
-                  placeholder="{% translate 'Describe what should match…' %}"
+                  class="textarea textarea-bordered textarea-sm w-full min-h-16 leading-snug text-sm"
+                  placeholder="{% if mode == 'keyword_semantic' %}{% translate 'Then describe the meaning the post should carry…' %}{% else %}{% translate 'Describe what should match…' %}{% endif %}"
                   maxlength="2000"
                   required></textarea>
         <div class="flex items-center justify-end gap-1.5">
           <button type="button"
-                  class="btn btn-ghost btn-xs"
+                  class="btn btn-ghost btn-xs h-7 min-h-7 px-3"
                   @click="adding = false; newKeyword = ''; newPrompt = ''">{% translate "Cancel" %}</button>
-          <button type="submit" class="btn btn-primary btn-xs">{% translate "Add" %}</button>
+          <button type="submit" class="btn btn-primary btn-xs h-7 min-h-7 px-3">{% translate "Add" %}</button>
         </div>
         {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == mode %}
           <p class="text-xs text-error">{{ inline_error.message }}</p>

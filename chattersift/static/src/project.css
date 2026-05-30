@@ -115,14 +115,37 @@ h1, h2, h3, h4, h5, h6,
 h1 { letter-spacing: -0.035em; }
 h2 { letter-spacing: -0.03em; }
 
-/* Controls: larger hit targets and more confident type. */
-.btn {
+/* Density tokens. Defaults reproduce the 37signals scale below; `.density-compact`
+   re-points them for dense regions (e.g. the /dash/ shell) without touching the
+   global root font-size. Custom hand-rolled controls can also read these vars
+   to stay aligned with whichever density they're rendered in. */
+:root {
+  --ctrl-h:      3rem;
+  --ctrl-fs:     1.0625rem;
+  --ctrl-px:     1.25rem;
+  --surface-fs:  1.0625rem;
+  --card-pad:    2rem;
+}
+
+.density-compact {
+  --ctrl-h:      1.75rem;
+  --ctrl-fs:     0.8125rem;
+  --ctrl-px:     0.625rem;
+  --surface-fs:  0.9375rem;
+  --card-pad:    1rem;
+  font-size: var(--surface-fs);
+}
+
+/* Controls: larger hit targets and more confident type. The `:not(...)` guards
+   let explicit DaisyUI size modifiers (btn-xs / btn-sm / btn-lg, input-xs, etc.)
+   win the cascade, so authors can still shrink or enlarge individual controls. */
+.btn:not(.btn-xs):not(.btn-sm):not(.btn-lg) {
   font-family: var(--font-sans);
   font-weight: 600;
   letter-spacing: -0.005em;
-  font-size: 1.0625rem;
-  min-height: 3rem;
-  padding-inline: 1.25rem;
+  font-size:      var(--ctrl-fs);
+  min-height:     var(--ctrl-h);
+  padding-inline: var(--ctrl-px);
 }
 
 .btn-sm {
@@ -137,15 +160,14 @@ h2 { letter-spacing: -0.03em; }
   padding-inline: 1.75rem;
 }
 
-.input,
-.select,
-.textarea {
-  font-size: 1.0625rem;
+.input:not(.input-xs):not(.input-sm):not(.input-lg),
+.select:not(.select-xs):not(.select-sm):not(.select-lg) {
+  height:    var(--ctrl-h);
+  font-size: var(--ctrl-fs);
 }
 
-.input,
-.select {
-  height: 3rem;
+.textarea:not(.textarea-xs):not(.textarea-sm):not(.textarea-lg) {
+  font-size: var(--ctrl-fs);
 }
 
 .menu :where(li > *:not(ul, .menu-title, details, .btn)) {
@@ -170,7 +192,7 @@ h2 { letter-spacing: -0.03em; }
 }
 
 .card-body {
-  padding: 2rem;
+  padding: var(--card-pad);
 }
 
 /* Brand wordmark */
@@ -213,9 +235,11 @@ a:hover .brand-sift::after,
 /* Remove double focus outline and add primary border on focus */
 .dropdown > [tabindex]:focus,
 .input:focus,
-.select:focus {
+.select:focus,
+.textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 
 /* Style unclassed Django form widgets rendered inside allauth forms */
