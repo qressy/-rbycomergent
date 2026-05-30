@@ -79,13 +79,21 @@ COPY --from=python-build-stage --chown=django:django ${APP_HOME} ${APP_HOME}
 # make django owner of the WORKDIR directory as well.
 RUN chown django:django ${APP_HOME}
 
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
+# Place executables in the environment at the front of the path.
+# Interface: runtime processes need a writable home for libraries that use user-level control sockets.
+ENV HOME="/tmp" PATH="/app/.venv/bin:$PATH"
 
 USER django
 
-RUN DATABASE_URL="" \
+RUN DATABASE_URL="sqlite:////tmp/build.sqlite3" \
   DJANGO_SETTINGS_MODULE="config.settings.test" \
   python manage.py compilemessages
+
+RUN DATABASE_URL="sqlite:////tmp/build.sqlite3" \
+  DJANGO_SETTINGS_MODULE="config.settings.production" \
+  DJANGO_SECRET_KEY="build-time-secret-key" \
+  CHATTERSIFT_SITE_DOMAIN="example.com" \
+  DJANGO_ADMIN_URL="admin/" \
+  python manage.py collectstatic --noinput --ignore 'src/*'
 
 ENTRYPOINT ["/entrypoint"]
