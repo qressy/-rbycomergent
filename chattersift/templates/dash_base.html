@@ -10,7 +10,14 @@
     <div class="relative flex h-14 items-center justify-between rounded-full bg-base-100/80 backdrop-blur-lg text-base-content ring-1 ring-base-300 shadow-sm pl-4 pr-2.5"
          x-data="{ mobileOpen: false, activeNav: '{{ dash_active_nav }}', init() { window.addEventListener('popstate', () => this.syncFromUrl()); document.body.addEventListener('htmx:pushedIntoHistory', () => this.syncFromUrl()); }, syncFromUrl() { const path = window.location.pathname; if (path.includes('/settings/')) this.activeNav = 'settings'; else if (path.includes('/matches/')) this.activeNav = 'matches'; else this.activeNav = 'monitors'; } }">
       {# Left: brand #}
-      <a href="{% url 'tracking:dashboard' %}" class="text-base shrink-0 pl-2">
+      <a href="{% url 'tracking:dashboard' %}"
+         class="inline-flex items-center gap-2 text-base shrink-0 pl-2 text-base-content">
+        <img src="{% static 'images/icon-192.png' %}"
+             width="28"
+             height="28"
+             class="w-7 h-7 shrink-0"
+             alt=""
+             aria-hidden="true" />
         <span class="brand">Chatter<span class="brand-sift">Sift</span></span>
       </a>
       {# Center: nav links #}
