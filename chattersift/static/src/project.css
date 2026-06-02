@@ -376,6 +376,52 @@ a:hover .brand-sift::after,
   background-size: 24px 24px;
 }
 
+/* Landing page: replace DaisyUI's gray btn-ghost hover wash with a sweep-in
+   primary underline that echoes the .brand-sift wordmark treatment. Scoped to
+   .landing-page so the rest of the app keeps the default DaisyUI hover. */
+.landing-page .btn.btn-ghost {
+  position: relative;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.landing-page .btn.btn-ghost:hover,
+.landing-page .btn.btn-ghost:focus-visible {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.landing-page .btn.btn-ghost::after {
+  content: "";
+  position: absolute;
+  left: var(--ctrl-px);
+  right: var(--ctrl-px);
+  bottom: 0.55rem;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-page .btn.btn-ghost:hover::after,
+.landing-page .btn.btn-ghost:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* btn-sm uses tighter horizontal padding; pull the underline inset to match. */
+.landing-page .btn.btn-ghost.btn-sm::after {
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.4rem;
+}
+
+/* Bordered ghost buttons (Sign in, Star on GitHub): border tracks the color. */
+.landing-page .btn.btn-ghost.border-base-300:hover,
+.landing-page .btn.btn-ghost.border-base-300:focus-visible {
+  border-color: var(--color-primary);
+}
+
 /* Landing page: fade-in animation */
 @keyframes landing-fade-in {
   from {
