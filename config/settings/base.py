@@ -102,6 +102,7 @@ CHATTERSIFT_DASHBOARD_SETTINGS_EXTENSION_TEMPLATE = ""
 CHATTERSIFT_DASHBOARD_SETTINGS_CONTEXT_PROVIDER = (
     "chattersift.core.extension_points.default_dashboard_settings_context_provider"
 )
+CHATTERSIFT_DASHBOARD_ACCOUNT_MENU_EXTENSION_TEMPLATE = ""
 CHATTERSIFT_ENABLE_API = env.bool("CHATTERSIFT_ENABLE_API", default=False)
 CHATTERSIFT_SITE_DOMAIN = env("CHATTERSIFT_SITE_DOMAIN", default="localhost")
 CHATTERSIFT_API_ROUTERS = [
@@ -268,6 +269,7 @@ TEMPLATES: list[dict[str, Any]] = [
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
                 "chattersift.users.context_processors.allauth_settings",
+                "chattersift.users.context_processors.dashboard_chrome",
             ],
         },
     },
