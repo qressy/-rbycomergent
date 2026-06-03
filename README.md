@@ -1,142 +1,123 @@
 # chattersift
 
-Keywords monitoring for Reddit.
+Keywords monitoring for Reddit. Hosted SaaS at **[chattersift.com](https://chattersift.com)**.
 
-[![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 License: MIT
 
-## Settings
+Chattersift is a Django 5.2 app that watches Reddit for keywords across user-defined monitors and delivers matches as alerts. It is HTMX/server-rendered first. The fastest way to use it is the hosted SaaS at [chattersift.com](https://chattersift.com); to self-host, follow the deployment instructions below. See [AGENTS.md](AGENTS.md) for repository conventions and [docs/deployment.md](docs/deployment.md) for the full deployment reference.
 
-Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getting-started/settings.html).
+## Self-Hosted Deployment
 
-## Basic Commands
+Chattersift is designed to run on a single VPS with Docker Compose. Caddy terminates HTTPS, Postgres and Redis run as internal services on named volumes, and migrations run automatically before Django and Celery start.
 
-### Setting Up Your Users
-
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
-
-- To create a **superuser account**, use this command:
-
-      uv run python manage.py createsuperuser
-
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
-
-### Type checks
-
-Running type checks with ty:
-
-    uv run ty check
-
-### Test coverage
-
-To run the tests, check your test coverage, and generate an HTML coverage report:
-
-    uv run coverage run -m pytest
-    uv run coverage html
-    uv run open htmlcov/index.html
-
-#### Running tests with pytest
-
-    uv run pytest
-
-### Tailwind CSS
-
-Install the Node dependencies:
-
-    npm install
-
-Build the Django-served stylesheet:
-
-    npm run build:css
-
-Watch and rebuild during frontend work:
-
-    npm run watch:css
-
-The Tailwind and DaisyUI source stylesheet is `chattersift/static/src/project.css`. The compiled output is `chattersift/static/css/project.css`, which is already linked from the base template.
-
-### Local workflows
-
-Use `make shell` to run Chattersift from the local shell on port 8000. Use `make up` to run it through Docker.
-Both workflows build CSS and run `collectstatic`; the shell workflow also runs migrations before starting Django.
-
-### Live reloading
-
-Moved to [Live reloading](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally.html#using-webpack-or-gulp).
-
-### Celery
-
-This app comes with Celery.
-
-To run a celery worker:
-
-```bash
-cd chattersift
-uv run celery -A config.celery_app worker -l info
-```
-
-Please note: For Celery's import magic to work, it is important _where_ the celery commands are run. If you are in the same folder with _manage.py_, you should be right.
-
-To run [periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html), you'll need to start the celery beat scheduler service. You can start it as a standalone process:
-
-```bash
-cd chattersift
-uv run celery -A config.celery_app beat
-```
-
-or you can embed the beat service inside a worker with the `-B` option (not recommended for production use):
-
-```bash
-cd chattersift
-uv run celery -A config.celery_app worker -B -l info
-```
-
-### Email Server
-
-In development, it is often nice to be able to see emails that are being sent from your application. For that reason local SMTP server [Mailpit](https://github.com/axllent/mailpit) with a web interface is available as docker container.
-
-Container mailpit will start automatically when you will run all docker containers.
-Please check [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally-docker.html) for more details how to start all containers.
-
-With Mailpit running, to view messages that are sent by your application, open your browser and go to `http://127.0.0.1:8025`
-
-### Sentry
-
-Sentry is an error logging aggregator service. You can sign up for a free account at <https://sentry.io/signup/?code=cookiecutter> or download and host it yourself.
-The system is set up with reasonable defaults, including 404 logging and integration with the WSGI application.
-
-You must set the DSN url in production.
-
-## Deployment
-
-### Quick Deploy
-
-Chattersift is designed to run on a single VPS with Docker Compose and Caddy.
+### First deploy
 
 ```bash
 uv sync
-make deploy-init
+make deploy-init      # generates .env.production with internal secrets
 ```
 
-Edit `.env.production` and set at least:
+Edit `.env.production` and set at minimum:
 
 - `CHATTERSIFT_SITE_DOMAIN`
 - `CADDY_SITE_ADDRESS`
 - `CADDY_ACME_EMAIL`
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_CSRF_TRUSTED_ORIGINS`
-- `DJANGO_DEFAULT_FROM_EMAIL`
-- `CHATTERSIFT_EMAIL_PROVIDER` plus that provider's credentials
+- `DJANGO_DEFAULT_FROM_EMAIL` / `DJANGO_SERVER_EMAIL`
+- `CHATTERSIFT_EMAIL_PROVIDER` and the matching provider credentials
 
-Then start the production stack:
+Then bring up the production stack:
 
 ```bash
-make deploy
-make deploy-logs
+make deploy           # alias for `make up production` — build + start
+make deploy-logs      # follow production logs
 ```
 
-The production stack includes Postgres, Redis, Django, Celery, and Caddy. It runs migrations automatically before the web and worker services start.
+The production stack includes Postgres, Redis, Django (Gunicorn + Uvicorn workers), Celery worker, Celery beat, and Caddy. Health check: `/healthz/`.
 
-See [docs/deployment.md](docs/deployment.md) for the full deployment, upgrade, email, LLM, and backup reference.
+### Upgrades
+
+```bash
+git pull
+make deploy
+```
+
+The `migrate` service runs `migrate --noinput` and syncs `django_site` from `CHATTERSIFT_SITE_DOMAIN` before Django and Celery start.
+
+### Production management
+
+```bash
+make deploy-manage shell                 # Django shell in production container
+make deploy-manage createsuperuser
+make ps production                       # list running containers
+make logs production [service]           # follow logs for a single service
+make down production                     # stop the stack
+```
+
+### Backups
+
+```bash
+make backup                              # snapshot the production database
+make backups                             # list snapshots
+make restore <backup-file>               # restore from a snapshot
+```
+
+See [docs/deployment.md](docs/deployment.md) for the full reference, including email provider configuration, LLM credentials, and backup retention.
+
+## Local Development
+
+Install Python dependencies and run the local stack:
+
+```bash
+uv sync
+make shell            # serve Django on http://127.0.0.1:8000 (runs migrations + collectstatic)
+```
+
+Or run everything in Docker:
+
+```bash
+make up               # start the local Docker stack
+make manage migrate   # run management commands in the Docker django service
+```
+
+`make help` lists every target. All Make targets accept an optional `local` / `production` mode argument (default: `local`).
+
+### Tailwind CSS
+
+```bash
+npm install
+npm run build:css     # one-off build
+npm run watch:css     # rebuild on template / style changes
+```
+
+Source: `chattersift/static/src/project.css`. Compiled output: `chattersift/static/css/project.css` (already linked from the base template).
+
+### Tests, lint, types
+
+```bash
+make test             # uv run pytest
+make lint             # uv run ruff check .
+make type             # uv run ty check
+make template-lint    # djlint
+make migration-check  # detect missing migrations
+```
+
+Tests use `pytest` + `pytest-django` and read `DATABASE_URL`; use Postgres locally.
+
+### Users
+
+- Create a normal account through the Sign Up form; email verification shows up in the console (or Mailpit at `http://127.0.0.1:8025` when running Docker).
+- Create a superuser with `uv run python manage.py createsuperuser` (or `make manage createsuperuser` in Docker).
+
+### Celery
+
+```bash
+cd chattersift
+uv run celery -A config.celery_app worker -l info
+uv run celery -A config.celery_app beat        # periodic tasks
+```
+
+Run `celery` from the directory containing `manage.py` so Celery's import magic resolves correctly. The Docker stacks run a worker and beat container automatically.

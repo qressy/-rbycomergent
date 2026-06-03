@@ -19,7 +19,14 @@ Required user-edited values:
 - `DJANGO_ALLOWED_HOSTS`: comma-separated public hosts.
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: comma-separated `https://` origins.
 - `DJANGO_DEFAULT_FROM_EMAIL` and `DJANGO_SERVER_EMAIL`: sender addresses.
+- `DJANGO_ADMIN_EMAIL`: address that receives error notifications.
 - `CHATTERSIFT_EMAIL_PROVIDER` plus the provider credentials below.
+
+Optional toggles:
+
+- `DJANGO_ACCOUNT_ALLOW_REGISTRATION`: set to `False` to disable public signups.
+- `WEB_CONCURRENCY`: Gunicorn worker count (default `1`).
+- `CELERY_WORKER_CONCURRENCY`: Celery worker concurrency (default `1`).
 
 Start the stack:
 
@@ -107,6 +114,8 @@ CHATTERSIFT_SEMANTIC_LLM_MODEL=gpt-4.1-mini
 CHATTERSIFT_SEMANTIC_LLM_API_KEY=secret
 ```
 
+Set `CHATTERSIFT_SEMANTIC_LLM_BASE_URL` to point at an OpenAI-compatible endpoint (for example a self-hosted gateway or Azure deployment).
+
 You can also use provider-native LiteLLM variables such as:
 
 ```dotenv
@@ -114,6 +123,18 @@ OPENAI_API_KEY=secret
 ANTHROPIC_API_KEY=secret
 GEMINI_API_KEY=secret
 ```
+
+## Error Reporting (Optional)
+
+Sentry is wired in but disabled until a DSN is set:
+
+```dotenv
+SENTRY_DSN=https://...ingest.sentry.io/...
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.0
+```
+
+Raise `SENTRY_TRACES_SAMPLE_RATE` to sample performance traces; leave at `0.0` to capture errors only.
 
 ## Backups And Restore
 
@@ -131,7 +152,7 @@ List backup files:
 make backups
 ```
 
-Restore using the cookiecutter maintenance command:
+Restore a backup:
 
 ```bash
 make restore <backup-file>

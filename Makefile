@@ -6,13 +6,11 @@ export DJANGO_READ_DOT_ENV_FILE := True
 
 LOCAL_COMPOSE_FILE := docker-compose.local.yml
 PRODUCTION_COMPOSE_FILE := docker-compose.production.yml
-DOCS_COMPOSE_FILE := docker-compose.docs.yml
 LOCAL_POSTGRES_ENV := .envs/.local/.postgres
 PRODUCTION_ENV_FILE := .env.production
 
 LOCAL_COMPOSE := docker compose -f $(LOCAL_COMPOSE_FILE)
 PRODUCTION_COMPOSE := docker compose --env-file $(PRODUCTION_ENV_FILE) -f $(PRODUCTION_COMPOSE_FILE)
-DOCS_COMPOSE := docker compose -f $(DOCS_COMPOSE_FILE)
 
 MODE_NAMES := local production
 FIRST_ARG := $(word 2,$(MAKECMDGOALS))
