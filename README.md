@@ -1,21 +1,31 @@
 # chattersift
 
-Keywords monitoring for Reddit. Hosted SaaS at **[chattersift.com](https://chattersift.com)**.
+> Before going further, take 30 seconds to head to **[chattersift.com](https://chattersift.com)** and register a free account to see if it's useful to you. The hosted SaaS is the fastest way to find out — self-hosting is documented below if you'd rather run it yourself.
+
+Keywords monitoring for Reddit.
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 License: MIT
 
-Chattersift is a Django 5.2 app that watches Reddit for keywords across user-defined monitors and delivers matches as alerts. It is HTMX/server-rendered first. The fastest way to use it is the hosted SaaS at [chattersift.com](https://chattersift.com); to self-host, follow the deployment instructions below. See [AGENTS.md](AGENTS.md) for repository conventions and [docs/deployment.md](docs/deployment.md) for the full deployment reference.
+Chattersift is a Django app that watches Reddit for keywords across user-defined monitors and delivers matches as alerts. It is HTMX/server-rendered first. See [docs/deployment.md](docs/deployment.md) for the full deployment reference.
 
 ## Self-Hosted Deployment
 
 Chattersift is designed to run on a single VPS with Docker Compose. Caddy terminates HTTPS, Postgres and Redis run as internal services on named volumes, and migrations run automatically before Django and Celery start.
 
+### Requirements
+
+You only need these on the VPS itself — everything else (Python, Node, Postgres, Redis) runs inside containers.
+
+- **GNU Make**
+- **Docker** with the Compose v2 plugin (`docker compose`, not `docker-compose`)
+- **Python 3** — stdlib only, used by `scripts/bootstrap-deploy-env`
+- **git** — to clone the repo and pull upgrades
+
 ### First deploy
 
 ```bash
-uv sync
 make deploy-init      # generates .env.production with internal secrets
 ```
 
