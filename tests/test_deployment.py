@@ -63,26 +63,27 @@ def test_production_amazon_ses_email_provider_uses_region_env(monkeypatch):
         CHATTERSIFT_SITE_DOMAIN="deploy.example.com",
         CHATTERSIFT_EMAIL_PROVIDER="amazon_ses",
         ANYMAIL_AMAZON_SES_REGION_NAME="us-east-2",
+        ANYMAIL_AMAZON_SES_CONFIGURATION_SET_NAME="chattersift-prod",
     )
 
     assert settings_module.EMAIL_BACKEND == "anymail.backends.amazon_ses.EmailBackend"
     assert "anymail" in settings_module.INSTALLED_APPS
     assert settings_module.ANYMAIL["AMAZON_SES_CLIENT_PARAMS"] == {"region_name": "us-east-2"}
+    assert settings_module.ANYMAIL["AMAZON_SES_CONFIGURATION_SET_NAME"] == "chattersift-prod"
 
 
-def test_production_amazon_ses_email_provider_preserves_json_client_params(monkeypatch):
+def test_production_anymail_provider_reads_webhook_secret(monkeypatch):
+    provider_token = "postmark-token"  # noqa: S105
+    webhook_secret = "webhook-user:webhook-password"  # noqa: S105
     settings_module = _import_production_settings(
         monkeypatch,
         CHATTERSIFT_SITE_DOMAIN="deploy.example.com",
-        CHATTERSIFT_EMAIL_PROVIDER="amazon_ses",
-        ANYMAIL_AMAZON_SES_CLIENT_PARAMS='{"endpoint_url":"https://email.us-east-2.amazonaws.com"}',
-        ANYMAIL_AMAZON_SES_REGION_NAME="us-east-2",
+        CHATTERSIFT_EMAIL_PROVIDER="postmark",
+        ANYMAIL_POSTMARK_SERVER_TOKEN=provider_token,
+        ANYMAIL_WEBHOOK_SECRET=webhook_secret,
     )
 
-    assert settings_module.ANYMAIL["AMAZON_SES_CLIENT_PARAMS"] == {
-        "endpoint_url": "https://email.us-east-2.amazonaws.com",
-        "region_name": "us-east-2",
-    }
+    assert settings_module.ANYMAIL["WEBHOOK_SECRET"] == webhook_secret
 
 
 def test_production_rejects_unknown_email_provider(monkeypatch):
