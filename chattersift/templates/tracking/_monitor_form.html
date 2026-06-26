@@ -16,7 +16,34 @@
         hx-swap="outerHTML"
         hx-indicator="#global-loading"
         class="border border-base-300 bg-base-100 rounded-box overflow-hidden"
-        x-data="{ keywords: '{{ form.keywords.value|default_if_none:''|escapejs }}', mode: '{{ form.match_mode.value|default:'keyword' }}' }">
+        x-data="{
+          keywords: '{{ form.keywords.value|default_if_none:''|escapejs }}',
+          mode: '{{ form.match_mode.value|default:'keyword' }}',
+          source: '{% with sub=form.subreddit.value|default:'' %}{% if sub == 'all' %}all{% elif sub == 'popular' %}popular{% elif sub %}custom{% else %}all{% endif %}{% endwith %}',
+          customSubreddit: '{% with sub=form.subreddit.value|default:'' %}{% if sub and sub != 'all' and sub != 'popular' %}{{ sub|escapejs }}{% endif %}{% endwith %}',
+          extracting: false,
+          extractError: '',
+          async runExtract() {
+            this.extractError = '';
+            this.extracting = true;
+            try {
+              const r = await fetch('{% url 'tracking:keywords_from_url' %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                body: new FormData(),
+              });
+              const data = await r.json();
+              if (!r.ok) { this.extractError = data.error || 'Could not extract keywords.'; return; }
+              const existing = this.keywords.split(/[\n,]+/).map((k) => k.trim()).filter(Boolean);
+              const merged = [...new Map([...existing, ...data.keywords].map((v) => [v.toLowerCase(), v])).values()];
+              this.keywords = merged.join('\n');
+            } catch (e) {
+              this.extractError = 'Network error.';
+            } finally {
+              this.extracting = false;
+            }
+          }
+        }">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div role="alert" class="alert alert-error rounded-none">
@@ -24,14 +51,51 @@
       </div>
     {% endif %}
     <div class="p-5 space-y-4">
-      {# Subreddit #}
+      {# Source #}
       <div class="form-control gap-1">
+        <label class="label">
+          <span class="label-text font-medium">{% translate "Where to watch" %}</span>
+        </label>
+        <div role="tablist" class="tabs tabs-boxed">
+          <a role="tab"
+             class="tab"
+             :class="source === 'all' ? 'tab-active' : ''"
+             @click="source = 'all'">{% translate "All of Reddit" %}</a>
+          <a role="tab"
+             class="tab"
+             :class="source === 'popular' ? 'tab-active' : ''"
+             @click="source = 'popular'">{% translate "Popular" %}</a>
+          <a role="tab"
+             class="tab"
+             :class="source === 'custom' ? 'tab-active' : ''"
+             @click="source = 'custom'">{% translate "Custom subreddit" %}</a>
+        </div>
+        <p class="text-xs text-base-content/60 mt-1"
+           x-show="source === 'all'"
+           x-cloak>{% translate "Firehose across all of Reddit. Use specific keywords." %}</p>
+        <p class="text-xs text-base-content/60 mt-1"
+           x-show="source === 'popular'"
+           x-cloak>{% translate "Trending posts across Reddit." %}</p>
+      </div>
+      {# Subreddit #}
+      <div class="form-control gap-1" x-show="source === 'custom'" x-cloak>
         <label class="label" for="id_subreddit">
           <span class="label-text font-medium">{% translate "Subreddit" %}</span>
         </label>
-        {% render_field form.subreddit class+="input input-bordered w-full" placeholder="r/django" %}
+        <template x-if="source === 'custom'">
+          <input type="text"
+                 name="subreddit"
+                 id="id_subreddit"
+                 x-model="customSubreddit"
+                 maxlength="100"
+                 placeholder="r/django"
+                 class="input input-bordered w-full">
+        </template>
         {% if form.subreddit.errors %}<p class="text-sm text-error mt-1">{{ form.subreddit.errors|join:", " }}</p>{% endif %}
       </div>
+      <template x-if="source !== 'custom'">
+        <input type="hidden" name="subreddit" :value="source">
+      </template>
       {# Match mode #}
       <div class="form-control gap-1">
         <label class="label" for="id_match_mode">
@@ -44,6 +108,20 @@
         <label class="label" for="id_keywords">
           <span class="label-text font-medium">{% translate "Keywords" %}</span>
         </label>
+        {% if user.keyword_extraction_url %}
+          <div class="flex items-center gap-2">
+            <button type="button"
+                    class="btn btn-sm btn-outline"
+                    :disabled="extracting"
+                    @click="runExtract()">
+              <span x-show="!extracting">{% translate "Suggest from" %} {{ user.keyword_extraction_url }}</span>
+              <span x-show="extracting" x-cloak>{% translate "Extracting…" %}</span>
+            </button>
+            <a href="{% url 'tracking:dashboard_settings' %}"
+               class="text-xs link link-hover text-base-content/60">{% translate "Change" %}</a>
+          </div>
+          <p class="text-xs text-error mt-1" x-show="extractError" x-cloak x-text="extractError"></p>
+        {% endif %}
         {% translate "One keyword per line, or comma-separated" as keywords_placeholder %}
         {% render_field form.keywords class+="textarea textarea-bordered min-h-24 w-full focus:border-primary focus:outline-none" maxlength="4096" placeholder=keywords_placeholder x-model="keywords" %}
         {% if form.keywords.errors %}<p class="text-sm text-error mt-1">{{ form.keywords.errors|join:", " }}</p>{% endif %}

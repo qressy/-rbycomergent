@@ -1,98 +1,106 @@
 {% load i18n %}
+{% load tracking_extras %}
 
-{# Keywords sub-section: chip wrap with rename-in-place + inline add. #}
-{# Expected context: sub (subreddit), monitors (keyword monitors), inline_error. #}
+{# Keywords sub-section: chip grid. Chip click → /dash/leads/?monitor=<pk>. Hover → rename / delete. #}
+{# Expected context: sub, monitors, inline_error, match_counts_by_monitor. #}
 <section x-data="{ adding: false, newKeyword: '' }"
          {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}x-init="adding = true; newKeyword = ''"{% endif %}>
-  <header class="flex items-center gap-2 mb-2">
-    <h3 class="text-[11px] uppercase tracking-[0.1em] text-base-content/45 font-semibold">{% translate "Keywords" %}</h3>
+  <header class="flex items-center gap-2 mb-3">
+    <h3 class="text-[11px] uppercase tracking-[0.12em] text-base-content/45 font-semibold">{% translate "Keywords" %}</h3>
+    <span class="text-[11px] text-base-content/35 font-mono">{{ monitors|length }}</span>
   </header>
   <div class="flex flex-wrap items-center gap-2">
     {% for monitor in monitors %}
-      <div data-initial-err="{% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}{{ inline_error.message }}{% endif %}"
-           x-data="{ editing: false, value: '{{ monitor.keyword|escapejs }}', err: '' }"
-           x-init="err = $el.dataset.initialErr; if (err) editing = true">
-        {# Display chip #}
-        <div x-show="!editing"
-             class="inline-flex items-stretch h-7 rounded-md overflow-hidden border border-base-300 {% if not monitor.is_active %}opacity-50{% endif %}">
-          <button type="button"
-                  class="inline-flex items-center px-2.5 text-sm font-semibold leading-none bg-primary text-primary-content hover:brightness-110 hover:cursor-pointer transition"
-                  @click="editing = true; value = '{{ monitor.keyword|escapejs }}'; err = ''; $nextTick(() => $refs['inp{{ monitor.pk }}'].focus())"
-                  title="{% translate 'Click to rename' %}">{{ monitor.keyword }}</button>
-          <form method="post"
-                action="{% url 'tracking:monitor_delete' monitor.pk %}"
-                hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
-                hx-target="#dashboard-content"
-                hx-swap="outerHTML"
-                hx-indicator="#global-loading"
-                class="inline-flex">
-            {% csrf_token %}
-            <button type="submit"
-                    class="inline-flex items-center justify-center w-6 bg-primary text-primary-content/70 border-l border-primary-content/15 hover:bg-error hover:text-error-content hover:border-transparent transition-colors hover:cursor-pointer"
-                    title="{% blocktranslate with kw=monitor.keyword %}Remove {{ kw }}{% endblocktranslate %}">
-              <svg xmlns="http://www.w3.org/2000/svg"
-                   class="h-3 w-3"
-                   fill="none"
-                   viewBox="0 0 24 24"
-                   stroke="currentColor"
-                   stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </form>
-        </div>
-        {# Edit chip #}
-        <div x-show="editing" x-cloak class="inline-flex flex-col gap-0.5">
-          <form method="post"
-                action="{% url 'tracking:monitor_edit' monitor.pk %}"
-                hx-post="{% url 'tracking:monitor_edit' monitor.pk %}"
-                hx-target="#dashboard-content"
-                hx-swap="outerHTML"
-                hx-indicator="#global-loading"
-                class="inline-flex items-center"
-                @keydown.escape="editing = false; err = ''">
-            {% csrf_token %}
-            <input type="hidden" name="match_mode" value="keyword" />
-            <div class="inline-flex items-stretch h-7 rounded-md border border-base-300 bg-base-100 overflow-hidden focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition"
-                 :class="err ? 'border-error focus-within:border-error focus-within:ring-error/20' : ''">
-              <input type="text"
-                     name="keyword"
-                     x-ref="inp{{ monitor.pk }}"
-                     x-model="value"
-                     class="bg-transparent border-0 outline-none px-2.5 text-sm w-40 placeholder:text-base-content/40"
-                     maxlength="255"
-                     required />
+      {% with match_count=match_counts_by_monitor|dict_get:monitor.pk %}
+        <div data-initial-err="{% if inline_error.kind == 'edit' and inline_error.monitor_pk == monitor.pk %}{{ inline_error.message }}{% endif %}"
+             x-data="{ editing: false, value: '{{ monitor.keyword|escapejs }}', err: '' }"
+             x-init="err = $el.dataset.initialErr; if (err) editing = true"
+             class="group inline-flex items-stretch">
+          {# Display chip — clickable to filter leads #}
+          <div x-show="!editing" class="inline-flex items-stretch rounded-full overflow-hidden border border-base-300 bg-base-100 hover:border-primary/50 hover:bg-primary/5 transition {% if not monitor.is_active %}opacity-60{% endif %}">
+            <a href="{% url 'tracking:leads' %}?monitor={{ monitor.pk }}"
+               hx-get="{% url 'tracking:leads' %}?monitor={{ monitor.pk }}"
+               hx-target="#dash-content"
+               hx-swap="innerHTML"
+               hx-push-url="true"
+               class="inline-flex items-center gap-1.5 pl-3 pr-2 py-1 text-sm hover:cursor-pointer"
+               title="{% blocktranslate with kw=monitor.keyword %}View matches for "{{ kw }}"{% endblocktranslate %}">
+              <span class="font-medium text-base-content">{{ monitor.keyword }}</span>
+              {% if match_count %}
+                <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-base-300/70 text-[11px] font-mono font-semibold tabular-nums text-base-content/75">{{ match_count }}</span>
+              {% endif %}
+            </a>
+            {# Hover-revealed actions #}
+            <div class="inline-flex items-center border-l border-base-300/70 opacity-0 group-hover:opacity-100 transition-opacity">
               <button type="button"
-                      class="inline-flex items-center justify-center w-6 text-base-content/40 hover:text-base-content/80 hover:bg-base-200 transition-colors hover:cursor-pointer"
-                      @click="editing = false; err = ''"
-                      title="{% translate 'Cancel (Esc)' %}">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     class="h-3 w-3"
-                     fill="none"
-                     viewBox="0 0 24 24"
-                     stroke="currentColor"
-                     stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      class="inline-flex items-center justify-center w-6 h-full text-base-content/50 hover:text-base-content hover:bg-base-200 transition hover:cursor-pointer"
+                      @click="editing = true; value = '{{ monitor.keyword|escapejs }}'; err = ''; $nextTick(() => $refs['inp{{ monitor.pk }}'].focus())"
+                      title="{% translate 'Rename' %}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
                 </svg>
               </button>
+              <form method="post"
+                    action="{% url 'tracking:monitor_delete' monitor.pk %}"
+                    hx-post="{% url 'tracking:monitor_delete' monitor.pk %}"
+                    hx-target="#dashboard-content"
+                    hx-swap="outerHTML"
+                    hx-indicator="#global-loading"
+                    class="inline-flex">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center justify-center w-6 h-full text-base-content/50 hover:text-error hover:bg-error/10 transition hover:cursor-pointer"
+                        title="{% blocktranslate with kw=monitor.keyword %}Remove {{ kw }}{% endblocktranslate %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </form>
             </div>
-            <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">{% translate "Save" %}</button>
-          </form>
-          <span x-show="err" x-text="err" class="text-xs text-error mt-0.5"></span>
+          </div>
+          {# Edit chip #}
+          <div x-show="editing" x-cloak class="inline-flex flex-col gap-0.5">
+            <form method="post"
+                  action="{% url 'tracking:monitor_edit' monitor.pk %}"
+                  hx-post="{% url 'tracking:monitor_edit' monitor.pk %}"
+                  hx-target="#dashboard-content"
+                  hx-swap="outerHTML"
+                  hx-indicator="#global-loading"
+                  class="inline-flex items-center"
+                  @keydown.escape="editing = false; err = ''">
+              {% csrf_token %}
+              <input type="hidden" name="match_mode" value="keyword" />
+              <div class="inline-flex items-stretch h-7 rounded-full border border-base-300 bg-base-100 overflow-hidden focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition"
+                   :class="err ? 'border-error focus-within:border-error focus-within:ring-error/20' : ''">
+                <input type="text"
+                       name="keyword"
+                       x-ref="inp{{ monitor.pk }}"
+                       x-model="value"
+                       class="bg-transparent border-0 outline-none px-3 text-sm w-40 placeholder:text-base-content/40"
+                       maxlength="255"
+                       required />
+                <button type="button"
+                        class="inline-flex items-center justify-center w-6 text-base-content/40 hover:text-base-content/80 hover:bg-base-200 transition-colors hover:cursor-pointer"
+                        @click="editing = false; err = ''"
+                        title="{% translate 'Cancel (Esc)' %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">{% translate "Save" %}</button>
+            </form>
+            <span x-show="err" x-text="err" class="text-xs text-error mt-0.5"></span>
+          </div>
         </div>
-      </div>
+      {% endwith %}
     {% endfor %}
     {# Inline add affordance #}
     <button type="button"
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-dashed border-base-300 text-sm font-medium text-base-content/50 hover:text-base-content hover:border-base-content/40 transition-colors hover:cursor-pointer"
+            class="inline-flex items-center gap-1 h-7 px-3 rounded-full border border-dashed border-base-300 text-sm font-medium text-base-content/50 hover:text-base-content hover:border-base-content/40 transition-colors hover:cursor-pointer"
             x-show="!adding"
             @click="adding = true; newKeyword = ''; $nextTick(() => $refs.addInp.focus())">
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-3 w-3"
-           fill="none"
-           viewBox="0 0 24 24"
-           stroke="currentColor"
-           stroke-width="2.5">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
       </svg>
       {% translate "add" %}
@@ -108,13 +116,12 @@
             @keydown.escape="adding = false; newKeyword = ''">
         {% csrf_token %}
         <input type="hidden" name="match_mode" value="keyword" />
-        {# Composed input + dismiss button sharing one bordered frame. Enter submits. #}
-        <div class="inline-flex items-stretch h-7 rounded-md border border-base-300 bg-base-100 overflow-hidden focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}border-error focus-within:border-error focus-within:ring-error/20{% endif %}">
+        <div class="inline-flex items-stretch h-7 rounded-full border border-base-300 bg-base-100 overflow-hidden focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 transition {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}border-error focus-within:border-error focus-within:ring-error/20{% endif %}">
           <input type="text"
                  name="keyword"
                  x-ref="addInp"
                  x-model="newKeyword"
-                 class="bg-transparent border-0 outline-none px-2.5 text-sm w-40 placeholder:text-base-content/40"
+                 class="bg-transparent border-0 outline-none px-3 text-sm w-40 placeholder:text-base-content/40"
                  placeholder="{% translate 'new keyword' %}"
                  maxlength="255"
                  required />
@@ -122,17 +129,11 @@
                   class="inline-flex items-center justify-center w-6 text-base-content/40 hover:text-base-content/80 hover:bg-base-200 transition-colors hover:cursor-pointer"
                   @click="adding = false; newKeyword = ''"
                   title="{% translate 'Cancel (Esc)' %}">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-3 w-3"
-                 fill="none"
-                 viewBox="0 0 24 24"
-                 stroke="currentColor"
-                 stroke-width="2.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        {# Hidden submit so Enter triggers form submission via htmx. #}
         <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">{% translate "Add" %}</button>
       </form>
       {% if inline_error.kind == 'add' and inline_error.subreddit == sub and inline_error.match_mode == 'keyword' %}

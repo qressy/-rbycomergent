@@ -1,0 +1,90 @@
+{% load i18n %}
+
+<div id="dashboard-content" class="space-y-6">
+  <header class="flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <div class="kicker">{% translate "Fetch History" %}</div>
+      <h1 class="font-display text-3xl md:text-4xl mt-2 leading-none" style="font-variation-settings: 'opsz' 144;">
+        {% translate "Run" %} <em class="italic text-primary">Log</em>
+      </h1>
+      <p class="text-sm text-base-content/60 mt-3">{% translate "Every Reddit fetch we've kicked off — scheduled, manual, or auto." %}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="kicker">{% translate "Subreddit" %}</label>
+      <select onchange="window.location.search = this.value ? '?subreddit=' + encodeURIComponent(this.value) : ''"
+              class="select select-bordered select-sm">
+        <option value="">{% translate "All" %}</option>
+        {% for s in subreddit_options %}
+          <option value="{{ s }}" {% if s == selected_subreddit %}selected{% endif %}>r/{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </header>
+
+  <div class="editorial-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-base-200/60 border-b border-base-300">
+        <tr class="text-left">
+          <th class="px-5 py-3 kicker text-left">{% translate "Started (UTC)" %}</th>
+          <th class="px-5 py-3 kicker text-left">{% translate "Subreddit" %}</th>
+          <th class="px-5 py-3 kicker text-left">{% translate "Trigger" %}</th>
+          <th class="px-5 py-3 kicker text-left">{% translate "User" %}</th>
+          <th class="px-5 py-3 kicker text-left">{% translate "Status" %}</th>
+          <th class="px-5 py-3 kicker text-right">{% translate "Matches" %}</th>
+          <th class="px-5 py-3 kicker text-right">{% translate "Took" %}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-base-300">
+        {% for r in runs %}
+          <tr class="hover:bg-base-200/40 transition">
+            <td class="px-5 py-3 font-mono text-xs whitespace-nowrap" title="{{ r.started_at|date:'c' }}">{{ r.started_at|date:"M j, Y · g:i:s A" }}</td>
+            <td class="px-5 py-3 font-display tracking-tight">r/{{ r.subreddit }}</td>
+            <td class="px-5 py-3">
+              {% if r.trigger == 'manual' %}
+                <span class="inline-flex items-center gap-1 text-xs font-medium text-primary">▶ {% translate "Manual" %}</span>
+              {% elif r.trigger == 'auto' %}
+                <span class="inline-flex items-center gap-1 text-xs font-medium text-accent">✶ {% translate "Auto" %}</span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 text-xs font-medium text-base-content/55">◷ {% translate "Scheduled" %}</span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-xs text-base-content/70">{{ r.user.email|default:"—" }}</td>
+            <td class="px-5 py-3">
+              {% if r.status == 'success' %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-success"></span>
+                  {% translate "Success" %}
+                </span>
+              {% elif r.status == 'rate_limited' %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-warning" title="{{ r.error }}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-warning"></span>
+                  {% translate "Rate-limited" %}
+                </span>
+              {% elif r.status == 'failed' %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-error" title="{{ r.error }}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-error"></span>
+                  {% translate "Failed" %}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-info">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-info animate-pulse"></span>
+                  {% translate "Running" %}
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-right font-mono tabular-nums">{{ r.matches_created }}</td>
+            <td class="px-5 py-3 text-right font-mono text-xs text-base-content/55 tabular-nums">
+              {% if r.duration_seconds is not None %}{{ r.duration_seconds|floatformat:1 }}s{% else %}—{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="px-5 py-16 text-center text-sm font-display italic text-base-content/40">
+              {% translate "No runs yet. They'll appear here after the next scheduled fetch or when you click Run now." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

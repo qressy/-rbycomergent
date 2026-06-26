@@ -1,0 +1,191 @@
+{% load i18n %}
+
+<div id="dashboard-content" class="space-y-4">
+  <header class="flex items-baseline justify-between gap-3">
+    <div>
+      <h1 class="font-display text-2xl font-bold tracking-tight">{% translate "Leads" %}</h1>
+      <p class="text-sm text-base-content/60">{% translate "Triage matched Reddit posts. Mark contacted as you reach out." %}</p>
+    </div>
+  </header>
+
+  {% if selected_monitor %}
+    <div class="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+      <span class="text-base-content/70">{% translate "Filtered by monitor:" %}</span>
+      <span class="font-semibold text-base-content">{{ selected_monitor.keyword|default:selected_monitor.semantic_description|truncatewords:4 }}</span>
+      <span class="text-base-content/40">·</span>
+      <span class="text-base-content/60">r/{{ selected_monitor.subreddit }}</span>
+      <a href="{% url 'tracking:leads' %}?status={{ status }}"
+         hx-get="{% url 'tracking:leads' %}?status={{ status }}"
+         hx-target="#dash-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         class="ml-auto inline-flex items-center gap-1 text-xs text-base-content/55 hover:text-base-content transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        {% translate "Clear filter" %}
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
+    {# Left: list pane #}
+    <aside class="lg:col-span-5 border border-base-300 bg-base-100 rounded-box overflow-hidden flex flex-col max-h-[80vh]">
+      {# Tabs #}
+      <div role="tablist" class="grid grid-cols-2 border-b border-base-300 text-sm font-medium">
+        {% with mon_qs=selected_monitor.pk|default_if_none:'' %}
+        <a role="tab"
+           href="{% url 'tracking:leads' %}?status=new{% if mon_qs %}&monitor={{ mon_qs }}{% endif %}"
+           hx-get="{% url 'tracking:leads' %}?status=new{% if mon_qs %}&monitor={{ mon_qs }}{% endif %}"
+           hx-target="#dash-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           class="px-4 py-3 text-center transition border-b-2 {% if status == 'new' %}border-primary text-base-content{% else %}border-transparent text-base-content/50 hover:text-base-content{% endif %}">
+          {% translate "New" %} <span class="ml-1 text-xs text-base-content/40">{{ new_count }}</span>
+        </a>
+        <a role="tab"
+           href="{% url 'tracking:leads' %}?status=contacted{% if mon_qs %}&monitor={{ mon_qs }}{% endif %}"
+           hx-get="{% url 'tracking:leads' %}?status=contacted{% if mon_qs %}&monitor={{ mon_qs }}{% endif %}"
+           hx-target="#dash-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           class="px-4 py-3 text-center transition border-b-2 {% if status == 'contacted' %}border-primary text-base-content{% else %}border-transparent text-base-content/50 hover:text-base-content{% endif %}">
+          {% translate "Contacted" %} <span class="ml-1 text-xs text-base-content/40">{{ contacted_count }}</span>
+        </a>
+        {% endwith %}
+      </div>
+      {# List #}
+      <ul class="overflow-y-auto divide-y divide-base-300">
+        {% for lead in leads %}
+          {% with subreddit=lead.monitor.subreddit %}
+            <li>
+              {% with mon_qs2=selected_monitor.pk|default_if_none:'' %}
+              <a href="{% url 'tracking:leads' %}?status={{ status }}&lead={{ lead.pk }}{% if mon_qs2 %}&monitor={{ mon_qs2 }}{% endif %}"
+                 hx-get="{% url 'tracking:leads' %}?status={{ status }}&lead={{ lead.pk }}{% if mon_qs2 %}&monitor={{ mon_qs2 }}{% endif %}"
+                 hx-target="#dash-content"
+                 hx-swap="innerHTML"
+                 hx-push-url="true"
+                 class="flex items-start gap-3 px-4 py-3 hover:bg-base-200/50 transition {% if selected and selected.pk == lead.pk %}bg-base-200/70{% endif %}">
+                {# Avatar with initials #}
+                <span class="shrink-0 grid place-items-center w-9 h-9 rounded-full text-xs font-display font-bold text-base-content"
+                      style="background: hsl({% widthratio lead.pk 1 137 %} 60% 88%); color: hsl({% widthratio lead.pk 1 137 %} 60% 30%);">
+                  {{ subreddit|slice:":2"|upper }}
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="text-sm font-medium text-base-content truncate">{{ lead.title|default:"(no title)" }}</p>
+                    <span class="text-xs text-base-content/40 whitespace-nowrap">{{ lead.occurred_at|timesince|truncatewords:1|cut:"," }}</span>
+                  </div>
+                  <div class="mt-0.5 flex items-center gap-1.5 text-xs text-base-content/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                    <span class="truncate">r/{{ subreddit }}</span>
+                    <span class="text-base-content/30">·</span>
+                    <span class="truncate">{{ lead.monitor.keyword|default:lead.monitor.semantic_description|truncatewords:3 }}</span>
+                  </div>
+                </div>
+              </a>
+              {% endwith %}
+            </li>
+          {% endwith %}
+        {% empty %}
+          <li class="px-4 py-12 text-center text-sm text-base-content/40">
+            {% if status == 'new' %}
+              {% translate "No new leads. Create more monitors or wait for the next fetch." %}
+            {% else %}
+              {% translate "Nothing here yet. Mark a lead Contacted from the New tab." %}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    {# Right: detail pane #}
+    <section class="lg:col-span-7 border border-base-300 bg-base-100 rounded-box flex flex-col max-h-[80vh]">
+      {% if selected %}
+        {% with sub=selected.monitor.subreddit %}
+          <div class="p-6 overflow-y-auto flex-1">
+            <h2 class="font-display text-xl font-semibold leading-snug">{{ selected.title|default:"(no title)" }}</h2>
+            <div class="mt-3 flex items-center gap-3 text-sm text-base-content/60">
+              <span class="inline-flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                r/{{ sub }}
+              </span>
+              <span class="text-base-content/30">·</span>
+              <span title="{{ selected.occurred_at|date:'c' }}">{{ selected.occurred_at|date:"M j, Y g:i A" }}</span>
+              {% if selected.monitor.keyword %}
+                <span class="text-base-content/30">·</span>
+                <span class="badge badge-primary badge-outline badge-sm">{{ selected.monitor.keyword }}</span>
+              {% endif %}
+              {% if selected.lead_status == 'contacted' %}
+                <span class="badge badge-success badge-sm gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  {% translate "Contacted" %}
+                </span>
+              {% endif %}
+            </div>
+            {% if selected.body %}
+              <div class="prose prose-sm max-w-none mt-6 whitespace-pre-wrap text-base-content/90">{{ selected.body }}</div>
+            {% else %}
+              <div class="mt-6 text-sm text-base-content/40 italic">{% translate "No post body — open in Reddit for full context." %}</div>
+            {% endif %}
+          </div>
+          {# Action bar #}
+          <div class="border-t border-base-300 px-6 py-4 bg-base-200/30 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button type="button"
+                      class="btn btn-sm gap-2"
+                      disabled
+                      title="{% translate 'Requires LLM credentials in Settings.' %}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                {% translate "Generate DM" %}
+              </button>
+              <span class="text-xs text-base-content/40">{% translate "AI features need LLM creds" %}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              {% if selected.lead_status == 'contacted' %}
+                <form method="post" action="{% url 'tracking:lead_mark_new' selected.pk %}"
+                      hx-post="{% url 'tracking:lead_mark_new' selected.pk %}"
+                      hx-target="#dash-content" hx-swap="innerHTML">
+                  {% csrf_token %}
+                  <button class="btn btn-ghost btn-sm">{% translate "Move back to New" %}</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'tracking:lead_mark_contacted' selected.pk %}"
+                      hx-post="{% url 'tracking:lead_mark_contacted' selected.pk %}"
+                      hx-target="#dash-content" hx-swap="innerHTML">
+                  {% csrf_token %}
+                  <button class="btn btn-success btn-sm gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    {% translate "Mark Contacted" %}
+                  </button>
+                </form>
+              {% endif %}
+              <a href="{{ selected.permalink }}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                {% translate "Open" %}
+              </a>
+              <form method="post" action="{% url 'tracking:lead_delete' selected.pk %}"
+                    hx-post="{% url 'tracking:lead_delete' selected.pk %}"
+                    hx-target="#dash-content" hx-swap="innerHTML"
+                    hx-confirm="{% translate 'Delete this lead?' %}">
+                {% csrf_token %}
+                <button class="btn btn-ghost btn-sm text-error gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                  {% translate "Delete" %}
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endwith %}
+      {% else %}
+        <div class="flex-1 grid place-items-center p-12">
+          <div class="text-center">
+            <div class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-base-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            </div>
+            <p class="text-sm text-base-content/60">{% translate "Select a lead from the list." %}</p>
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>

@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load tracking_extras %}
 
 <div id="dashboard-content"
      class="space-y-6"
@@ -8,6 +9,42 @@
     <h1 class="font-display text-2xl font-bold tracking-tight">{% translate "Monitors" %}</h1>
     <p class="text-sm text-base-content/60">{% translate "Track Reddit keywords by subreddit." %}</p>
   </header>
+  {% if inline_error and inline_error.kind == 'run_now' %}
+    <div role="alert" class="alert alert-warning"
+         x-data="{ show: true }" x-show="show"
+         x-init="setTimeout(() => show = false, 8000)">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM10.286 1.875a1.875 1.875 0 013.428 0l7.41 13.05a1.875 1.875 0 01-1.714 2.825H4.59a1.875 1.875 0 01-1.713-2.825L10.286 1.875z" />
+      </svg>
+      <span>{{ inline_error.message }}</span>
+    </div>
+  {% endif %}
+  {% if inline_info %}
+    <div role="alert"
+         class="alert alert-success"
+         x-data="{ show: true }"
+         x-show="show"
+         x-init="setTimeout(() => show = false, 6000)">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{{ inline_info.message }}</span>
+    </div>
+  {% endif %}
+  {% if not user.keyword_extraction_url %}
+    <div role="alert" class="alert alert-info">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <div class="font-medium">{% translate "Set your company URL to auto-suggest keywords." %}</div>
+        <div class="text-xs text-base-content/70">
+          {% translate "Add it once in Settings — we'll use it to pull keywords whenever you create a monitor." %}
+        </div>
+      </div>
+      <a href="{% url 'tracking:dashboard_settings' %}" class="btn btn-sm btn-primary">{% translate "Open Settings" %}</a>
+    </div>
+  {% endif %}
   {# Toolbar #}
   <section class="flex items-center justify-end border-b border-base-300 pb-3">
     <button class="btn btn-sm gap-1.5"
@@ -27,29 +64,79 @@
   </section>
   {# Collapsible new monitor form #}
   {% include "tracking/_monitor_form.html" %}
-  {# Monitor groups #}
-  <section class="space-y-4">
-    {% if subreddit_groups %}
-      {% for group in subreddit_groups %}
-        {% include "tracking/_subreddit_group.html" with group=group %}
-      {% endfor %}
-    {% else %}
-      <div class="border border-base-300 bg-base-100 p-8 rounded-box text-center">
-        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-base-200">
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-6 w-6 text-base-content/40"
-               fill="none"
-               viewBox="0 0 24 24"
-               stroke="currentColor"
-               stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
+
+  {% if subreddit_groups %}
+    {# Two-pane: subreddit list on left, selected subreddit's content on right #}
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[600px]">
+      {# ── LEFT: subreddit rail ───────────────────────────────────────── #}
+      <aside class="lg:col-span-4 border border-base-300 bg-base-100 rounded-box overflow-hidden flex flex-col max-h-[78vh]">
+        <div class="px-4 py-3 border-b border-base-300 bg-base-200/40">
+          <div class="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-base-content/55">{% translate "Subreddits" %}</div>
+          <div class="mt-0.5 font-display text-sm font-semibold tracking-tight">
+            {% blocktranslate count count=subreddit_groups|length %}{{ count }} tracked{% plural %}{{ count }} tracked{% endblocktranslate %}
+          </div>
         </div>
-        <p class="font-semibold">{% translate "No monitors yet" %}</p>
-        <p class="text-sm text-base-content/60 mt-1">
-          {% translate "Create a subreddit keyword monitor to start collecting matches." %}
-        </p>
+        <ul class="overflow-y-auto divide-y divide-base-300">
+          {% for group in subreddit_groups %}
+            {% with sub=group.subreddit sub_match=match_counts_by_subreddit|dict_get:group.subreddit is_selected=group.subreddit|stringformat:"s"|lower|stringformat:"s" %}
+              <li>
+                <a href="?subreddit={{ sub }}"
+                   hx-get="{% url 'tracking:dashboard' %}?subreddit={{ sub }}"
+                   hx-target="#dash-content"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   class="flex items-center gap-3 px-4 py-3 transition hover:bg-base-200/60 {% if selected_subreddit == sub %}bg-base-200/80 border-l-2 border-primary{% else %}border-l-2 border-transparent{% endif %}">
+                  <span class="shrink-0 grid place-items-center w-9 h-9 rounded-full text-xs font-display font-bold"
+                        style="background: hsl({% widthratio sub|length 1 47 %} 65% 88%); color: hsl({% widthratio sub|length 1 47 %} 60% 28%);">
+                    {{ sub|slice:":2"|upper }}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-baseline justify-between gap-2">
+                      <p class="text-sm font-semibold text-base-content truncate">r/{{ sub }}</p>
+                      {% if sub_match %}
+                        <span class="text-xs font-mono tabular-nums text-base-content/65 whitespace-nowrap">{{ sub_match }}</span>
+                      {% endif %}
+                    </div>
+                    <div class="mt-0.5 flex items-center gap-1.5 text-xs text-base-content/50">
+                      <span>{% blocktranslate count count=group.monitors|length %}{{ count }} monitor{% plural %}{{ count }} monitors{% endblocktranslate %}</span>
+                      {% if group.is_paused %}
+                        <span class="text-base-content/30">·</span>
+                        <span class="text-warning">{% translate "paused" %}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </a>
+              </li>
+            {% endwith %}
+          {% endfor %}
+        </ul>
+      </aside>
+
+      {# ── RIGHT: selected subreddit content ──────────────────────────── #}
+      <div class="lg:col-span-8">
+        {% for group in subreddit_groups %}
+          {% if group.subreddit == selected_subreddit %}
+            {% include "tracking/_subreddit_group.html" with group=group cooldown_minutes=run_now_cooldowns|dict_get:group.subreddit next_fetch_at=next_fetch_by_subreddit|dict_get:group.subreddit last_run_at=last_run_by_subreddit|dict_get:group.subreddit total_runs=run_count_by_subreddit|dict_get:group.subreddit %}
+          {% endif %}
+        {% endfor %}
       </div>
-    {% endif %}
-  </section>
+    </section>
+  {% else %}
+    <div class="border border-base-300 bg-base-100 p-8 rounded-box text-center">
+      <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-base-200">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-6 w-6 text-base-content/40"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor"
+             stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        </svg>
+      </div>
+      <p class="font-semibold">{% translate "No monitors yet" %}</p>
+      <p class="text-sm text-base-content/60 mt-1">
+        {% translate "Create a subreddit keyword monitor to start collecting matches." %}
+      </p>
+    </div>
+  {% endif %}
 </div>

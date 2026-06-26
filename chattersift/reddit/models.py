@@ -9,6 +9,40 @@ from .contracts import RedditFeedFormat
 from .contracts import RedditFeedKind
 
 
+class FetchRunStatus(models.TextChoices):
+    RUNNING = "running", "Running"
+    SUCCESS = "success", "Success"
+    FAILED = "failed", "Failed"
+    RATE_LIMITED = "rate_limited", "Rate limited"
+
+
+class FetchRunTrigger(models.TextChoices):
+    MANUAL = "manual", "Manual"
+    AUTO = "auto", "Auto (on monitor add)"
+    SCHEDULED = "scheduled", "Scheduled"
+
+
+class FetchRun(models.Model):
+    subreddit = models.CharField(max_length=100, db_index=True)
+    trigger = models.CharField(max_length=16, choices=FetchRunTrigger, default=FetchRunTrigger.SCHEDULED)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=FetchRunStatus, default=FetchRunStatus.RUNNING)
+    matches_created = models.PositiveIntegerField(default=0)
+    error = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["subreddit", "-started_at"], name="reddit_fetchrun_sub_idx")]
+
+    @property
+    def duration_seconds(self) -> float | None:
+        if self.finished_at and self.started_at:
+            return (self.finished_at - self.started_at).total_seconds()
+        return None
+
+
 class SubredditFetchState(models.Model):
     lane = models.CharField(max_length=32, default="default")
     kind = models.CharField(max_length=32, choices=RedditFeedKind)

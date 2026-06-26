@@ -1,0 +1,27 @@
+{% load i18n %}
+
+<div id="dashboard-content" class="space-y-6">
+  <header class="flex items-end justify-between gap-4 flex-wrap pt-2">
+    <div>
+      <div class="kicker">{% translate "Issue №" %} {{ overview.total_matches }}</div>
+      <h1 class="font-display text-5xl md:text-6xl mt-2 leading-none" style="font-variation-settings: 'opsz' 144; font-weight: 400;">
+        {% translate "The" %} <em class="italic text-primary">Brief</em>
+      </h1>
+      <p class="text-sm text-base-content/60 mt-3 max-w-md">{% translate "Where Reddit chatter is sifted into signal — your monitors, your matches, your edge." %}</p>
+    </div>
+    <div role="tablist" class="inline-flex items-center gap-0 border border-base-300 text-xs font-sans uppercase tracking-widest">
+      {% for key, label in overview.range_choices %}
+        <a role="tab"
+           href="{% url 'tracking:overview' %}?range={{ key }}"
+           hx-get="{% url 'tracking:overview' %}?range={{ key }}"
+           hx-target="#dash-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           class="px-4 py-2.5 transition border-r border-base-300 last:border-r-0 {% if overview.range_key == key %}bg-neutral text-neutral-content font-semibold{% else %}text-base-content/60 hover:bg-base-200 hover:text-base-content{% endif %}">
+          {{ label }}
+        </a>
+      {% endfor %}
+    </div>
+  </header>
+  {% include "tracking/_dashboard_overview.html" %}
+</div>

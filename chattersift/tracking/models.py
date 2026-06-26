@@ -60,6 +60,11 @@ class Monitor(models.Model):
         return self.keyword
 
 
+class LeadStatus(models.TextChoices):
+    NEW = "new", "New"
+    CONTACTED = "contacted", "Contacted"
+
+
 class Match(models.Model):
     monitor = models.ForeignKey(Monitor, on_delete=models.CASCADE)
     reddit_item_id = models.CharField(max_length=255)
@@ -75,6 +80,12 @@ class Match(models.Model):
     permalink = models.URLField()
     occurred_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+    lead_status = models.CharField(
+        max_length=16,
+        choices=LeadStatus.choices,
+        default=LeadStatus.NEW,
+    )
+    contacted_at = models.DateTimeField(null=True, blank=True)
 
     objects = MatchQuerySet.as_manager()  # ty: ignore[missing-argument]
 

@@ -1,4 +1,3 @@
-/* Tailwind CLI compiles this source file into chattersift/static/css/project.css. */
 @import "tailwindcss";
 
 @plugin "daisyui" {
@@ -6,63 +5,59 @@
 }
 
 @plugin "daisyui/theme" {
-  name: "chattersift";
+  name: "studio";
   default: true;
   prefersdark: false;
   color-scheme: light;
 
-  /* Base colors (backgrounds) */
-  --color-base-100: oklch(100% 0 0);           /* White - main background */
-  --color-base-200: oklch(97% 0.005 260);      /* ~#F9FAFB - secondary bg */
-  --color-base-300: oklch(93% 0.01 260);       /* ~#F3F4F6 - borders, tertiary bg */
-  --color-base-content: oklch(25% 0.02 260);   /* ~#1F2937 - primary text */
+  /* "Modern Studio" — soft off-white canvas, pure white cards, refined ink. */
+  /* Base */
+  --color-base-100: oklch(100% 0 0);           /* #FFFFFF — pure white for cards */
+  --color-base-200: oklch(98% 0.003 240);      /* #F7F8FA — soft off-white surfaces */
+  --color-base-300: oklch(92% 0.005 240);      /* #E5E7EB — refined hairline borders */
+  --color-base-content: oklch(20% 0.012 260);  /* #1F2128 — soft black text */
 
-  /* Primary (Blue) */
-  --color-primary: oklch(55% 0.22 250);        /* ~#3B82F6 */
-  --color-primary-content: oklch(100% 0 0);    /* Pure white for WCAG contrast */
+  /* Primary — modern blue */
+  --color-primary: oklch(56% 0.22 258);        /* #2E5BFF — confident, modern */
+  --color-primary-content: oklch(100% 0 0);
 
-  /* Secondary (Grey for secondary buttons) */
-  --color-secondary: oklch(55% 0.02 260);      /* ~#6B7280 */
-  --color-secondary-content: oklch(98% 0.01 260);
+  /* Secondary — slate */
+  --color-secondary: oklch(40% 0.012 260);
+  --color-secondary-content: oklch(98% 0.003 240);
 
-  /* Accent (Warm highlight) */
-  --color-accent: oklch(68% 0.16 55);          /* ~#C87830 */
-  --color-accent-content: oklch(98% 0.01 55);
+  /* Accent — Reddit-leaning ember */
+  --color-accent: oklch(66% 0.20 38);
+  --color-accent-content: oklch(100% 0 0);
 
-  /* Neutral (Dark grey for dark UI) */
-  --color-neutral: oklch(35% 0.02 260);        /* ~#374151 */
-  --color-neutral-content: oklch(95% 0.005 260);
+  /* Neutral — deep ink */
+  --color-neutral: oklch(15% 0.014 260);
+  --color-neutral-content: oklch(100% 0 0);
 
-  /* Info (Muted blue) */
-  --color-info: oklch(62% 0.06 250);           /* ~#6B8DB5 */
-  --color-info-content: oklch(98% 0.01 250);
+  /* Info — sky */
+  --color-info: oklch(60% 0.10 235);
+  --color-info-content: oklch(100% 0 0);
 
-  /* Success (Green) */
-  --color-success: oklch(70% 0.18 145);        /* ~#22C55E */
-  --color-success-content: oklch(98% 0.01 145);
+  /* Success — emerald */
+  --color-success: oklch(54% 0.15 155);
+  --color-success-content: oklch(100% 0 0);
 
-  /* Warning (Yellow) */
-  --color-warning: oklch(82% 0.18 85);         /* ~#EAB308 */
-  --color-warning-content: oklch(25% 0.08 85); /* Dark text for contrast */
+  /* Warning — amber */
+  --color-warning: oklch(78% 0.16 80);
+  --color-warning-content: oklch(20% 0.04 60);
 
-  /* Error (Red) */
-  --color-error: oklch(60% 0.22 25);           /* ~#EF4444 */
-  --color-error-content: oklch(98% 0.01 25);
+  /* Error — coral */
+  --color-error: oklch(58% 0.22 25);
+  --color-error-content: oklch(100% 0 0);
 
-  /* Border radius */
+  /* Modern, gently rounded cards */
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
-  --radius-box: 0.625rem;
+  --radius-box: 0.75rem;
 
-  /* Sizes: bumped for confident, 37signals-style controls */
   --size-selector: 0.3125rem;
   --size-field: 0.3125rem;
-
-  /* Border */
   --border: 1px;
-
-  /* Effects */
-  --depth: 1;
+  --depth: 0;
   --noise: 0;
 }
 
@@ -72,48 +67,214 @@
    so they grow naturally from the larger root size below. We also redefine
    the --text-* tokens to give the upper end of the scale extra presence. */
 @theme {
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-display: "Sora", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Geist", system-ui, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Times New Roman", Times, serif;
+  --font-mono: "Geist Mono", ui-monospace, "JetBrains Mono", monospace;
 
-  --text-xs: 0.8125rem;     /* ~14.6px at 18px root */
-  --text-sm: 0.9375rem;     /* ~16.9px */
-  --text-base: 1.0625rem;   /* ~19.1px - body */
-  --text-lg: 1.1875rem;     /* ~21.4px */
-  --text-xl: 1.375rem;      /* ~24.8px */
-  --text-2xl: 1.75rem;      /* ~31.5px */
-  --text-3xl: 2.25rem;      /* ~40.5px */
-  --text-4xl: 2.875rem;     /* ~51.8px */
-  --text-5xl: 3.625rem;     /* ~65.3px */
-  --text-6xl: 4.5rem;
-  --text-7xl: 5.5rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.5rem;
+  --text-4xl: 3.25rem;
+  --text-5xl: 4.5rem;
+  --text-6xl: 5.5rem;
+  --text-7xl: 7rem;
 }
 
 /* Root scale up: every rem-based size in DaisyUI, Tailwind and our own CSS
    inherits this bump. Pairs with body line-height for unmistakable clarity. */
 html {
-  font-size: 18px;
+  font-size: 16px;
+  background:
+    radial-gradient(at 0% 0%, oklch(96% 0.025 258 / 0.55), transparent 50%),
+    radial-gradient(at 100% 0%, oklch(96% 0.022 35 / 0.35), transparent 50%),
+    oklch(98% 0.003 240);
+  background-attachment: fixed;
 }
 
 body {
   line-height: 1.55;
-  font-feature-settings: "ss01", "cv11", "kern";
+  font-feature-settings: "ss01", "ss02", "cv11", "kern";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  color: var(--color-base-content);
+  background: transparent;
 }
 
-/* Headings: display font, tight tracking, heavy weight - the 37signals voice. */
+/* Editorial headings: serif display with optical sizing. */
 h1, h2, h3, h4, h5, h6,
 .card-title {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
-  color: var(--color-base-content);
+  font-weight: 500;
+  font-variation-settings: "opsz" 96, "SOFT" 25;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--color-neutral);
 }
 
-h1 { letter-spacing: -0.035em; }
-h2 { letter-spacing: -0.03em; }
+h1 {
+  font-weight: 500;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-weight: 500;
+  font-variation-settings: "opsz" 96, "SOFT" 25;
+  letter-spacing: -0.025em;
+}
+
+h3, h4, h5, h6 {
+  font-weight: 600;
+}
+
+/* Small uppercase rule labels — the editorial "kicker". */
+.kicker, .label-rule {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-base-content);
+  opacity: 0.55;
+}
+
+/* Editorial stat — big serif number with italic suffix. */
+.editorial-stat {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-weight: 500;
+  font-size: 3.75rem;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--color-neutral);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.editorial-stat sup {
+  font-size: 0.4em;
+  font-weight: 500;
+  vertical-align: super;
+  letter-spacing: 0;
+  margin-left: 0.1em;
+  color: var(--color-base-content);
+  opacity: 0.55;
+}
+
+/* Calmer chip — outline + subtle fill, monospace label for keywords. */
+.kw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 1.875rem;
+  padding: 0 0.625rem 0 0.75rem;
+  border: 1px solid var(--color-base-300);
+  background: color-mix(in oklch, var(--color-base-100) 70%, transparent);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: -0.005em;
+  color: var(--color-neutral);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.kw-chip:hover {
+  border-color: var(--color-neutral);
+  background: var(--color-base-100);
+}
+
+.kw-chip[data-paused="true"] { opacity: 0.45; }
+
+.kw-chip .kw-chip-count {
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--color-neutral);
+  color: var(--color-neutral-content);
+  letter-spacing: 0;
+}
+
+.kw-chip .kw-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  color: var(--color-base-content);
+  opacity: 0.4;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.kw-chip .kw-chip-x:hover {
+  opacity: 1;
+  background: var(--color-error);
+  color: var(--color-error-content);
+}
+
+/* Modern card — pure white, refined border, soft layered shadow. */
+.editorial-card {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  box-shadow:
+    0 1px 2px 0 rgb(15 23 42 / 0.04),
+    0 0 0 1px rgb(15 23 42 / 0.02);
+}
+
+.editorial-rule {
+  border-top: 1px solid var(--color-base-300);
+}
+
+/* Hairline accent — a single dotted Reddit-orange line above section titles. */
+.editorial-accent::before {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 2px;
+  background: var(--color-accent);
+  margin-bottom: 0.875rem;
+  border-radius: 1px;
+}
+
+/* Inkwell button — black pill with cream text. */
+.btn-ink {
+  background: var(--color-neutral);
+  color: var(--color-neutral-content);
+  border: 1px solid var(--color-neutral);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-ink:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.btn-paper {
+  background: var(--color-base-100);
+  color: var(--color-neutral);
+  border: 1px solid var(--color-base-300);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btn-paper:hover {
+  border-color: var(--color-neutral);
+  background: var(--color-base-100);
+}
 
 /* Density tokens. Defaults reproduce the 37signals scale below; `.density-compact`
    re-points them for dense regions (e.g. the /dash/ shell) without touching the

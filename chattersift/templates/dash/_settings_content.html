@@ -21,6 +21,38 @@
   {% if dashboard_settings_extension_template %}
     {% include dashboard_settings_extension_template %}
   {% endif %}
+  {# Company URL — used by "Suggest from URL" on monitor create #}
+  <section class="card border border-base-300 bg-base-100" id="keyword-extraction-url-section">
+    <div class="card-body">
+      <h2 class="card-title text-base">{% translate "Company URL" %}</h2>
+      <p class="text-sm text-base-content/70 mb-3">
+        {% translate "We'll suggest keywords from this page when creating a monitor." %}
+      </p>
+      <form method="post"
+            action="{% url 'tracking:keyword_extraction_url_update' %}"
+            hx-post="{% url 'tracking:keyword_extraction_url_update' %}"
+            hx-target="#dash-content"
+            hx-swap="innerHTML"
+            hx-indicator="#keyword-url-saving"
+            class="max-w-xl space-y-3">
+        {% csrf_token %}
+        <input type="url"
+               name="keyword_extraction_url"
+               value="{{ user.keyword_extraction_url|default_if_none:'' }}"
+               placeholder="https://your-company.com"
+               maxlength="500"
+               class="input input-bordered w-full">
+        <div class="flex items-center gap-3">
+          <button type="submit" class="btn btn-primary btn-xs">{% translate "Save" %}</button>
+          <span id="keyword-url-saving"
+                class="htmx-indicator inline-flex items-center gap-2 text-sm text-base-content/60">
+            <span class="loading loading-spinner loading-xs"></span>
+            {% translate "Saving" %}
+          </span>
+        </div>
+      </form>
+    </div>
+  </section>
   {# Matched items #}
   <section class="card border border-base-300 bg-base-100">
     <div class="card-body">

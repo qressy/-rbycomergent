@@ -1,0 +1,137 @@
+{% load i18n %}
+
+<section class="space-y-6">
+  {# KPI band - editorial numbers, no card chrome between them, just rules. #}
+  <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-base-300 border-y border-base-300">
+    {# Total matches in range #}
+    <div class="px-6 py-7 md:py-9 editorial-accent">
+      <div class="kicker">{% translate "Total matches" %} · {{ overview.range_label }}</div>
+      <div class="mt-2 flex items-baseline gap-3">
+        <div class="editorial-stat">{{ overview.range_matches }}</div>
+        {% if overview.range_delta_pct is not None %}
+          <div class="text-sm font-sans">
+            {% if overview.range_delta_pct >= 0 %}
+              <span class="text-success font-semibold">↑ {{ overview.range_delta_pct }}%</span>
+            {% else %}
+              <span class="text-error font-semibold">↓ {{ overview.range_delta_pct }}%</span>
+            {% endif %}
+            <span class="text-base-content/55">{% translate "vs previous" %}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {# Today #}
+    <div class="px-6 py-7 md:py-9 editorial-accent">
+      <div class="kicker">{% translate "Today" %}</div>
+      <div class="mt-2 flex items-baseline gap-3">
+        <div class="editorial-stat">{{ overview.today_matches }}</div>
+        <div class="text-sm font-sans">
+          {% if overview.today_delta_pct is not None %}
+            {% if overview.today_delta_pct >= 0 %}
+              <span class="text-success font-semibold">↑ {{ overview.today_delta_pct }}%</span>
+            {% else %}
+              <span class="text-error font-semibold">↓ {{ overview.today_delta_pct }}%</span>
+            {% endif %}
+            <span class="text-base-content/55">{% translate "vs yesterday" %}</span>
+          {% else %}
+            <span class="text-base-content/55">{% translate "first day" %}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {# Active monitors #}
+    <div class="px-6 py-7 md:py-9 editorial-accent">
+      <div class="kicker">{% translate "Active monitors" %}</div>
+      <div class="mt-2 flex items-baseline gap-3">
+        <div class="editorial-stat">{{ overview.active_monitors }}</div>
+        <div class="text-sm font-display italic text-base-content/55">{% translate "watching Reddit" %}</div>
+      </div>
+    </div>
+  </div>
+
+  {# Chart + Top lists #}
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-8 editorial-card p-7">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <div class="kicker">{% translate "Activity" %}</div>
+          <h2 class="font-display text-2xl font-medium tracking-tight mt-1" style="font-variation-settings: 'opsz' 96;">{% translate "Reddit signal, over time" %}</h2>
+        </div>
+        <span class="text-xs font-sans uppercase tracking-widest text-base-content/45">{{ overview.range_label }}</span>
+      </div>
+      {% if overview.total_matches %}
+        <div class="relative">
+          <svg viewBox="0 0 700 180" class="w-full h-52" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="oklch(45% 0.24 264)" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="oklch(45% 0.24 264)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            {% for g in "0123" %}
+              <line x1="0" y1="{% widthratio forloop.counter0 4 160 %}" x2="700" y2="{% widthratio forloop.counter0 4 160 %}" stroke="currentColor" stroke-opacity="0.08" stroke-dasharray="2,4"/>
+            {% endfor %}
+            {% spaceless %}
+              <polyline fill="none" stroke="oklch(45% 0.24 264)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+                points="{% for p in overview.spark_points %}{% widthratio forloop.counter0 overview.spark_divisor 700 %},{% widthratio p.n overview.spark_max 140 %} {% endfor %}"
+                transform="scale(1,-1) translate(0,-160)"/>
+              <polygon fill="url(#sparkFill)"
+                points="0,160 {% for p in overview.spark_points %}{% widthratio forloop.counter0 overview.spark_divisor 700 %},{% widthratio p.n overview.spark_max 140 %} {% endfor %}700,160"
+                transform="scale(1,-1) translate(0,-160)"/>
+            {% endspaceless %}
+            {% if overview.show_dots %}
+              {% for p in overview.spark_points %}
+                <circle cx="{% widthratio forloop.counter0 overview.spark_divisor 700 %}" cy="{% widthratio p.n overview.spark_max 140 %}" r="3" fill="var(--color-base-100)" stroke="oklch(45% 0.24 264)" stroke-width="2" transform="translate(0,160) scale(1,-1)">
+                  <title>{{ p.day }}: {{ p.n }} matches</title>
+                </circle>
+              {% endfor %}
+            {% endif %}
+          </svg>
+          <div class="flex justify-between mt-3 text-[10px] font-sans uppercase tracking-widest text-base-content/40">
+            {% for p in overview.spark_points %}<span class="{% if not p.show_label %}invisible{% endif %}">{{ p.day }}</span>{% endfor %}
+          </div>
+        </div>
+      {% else %}
+        <div class="h-44 flex items-center justify-center text-sm font-display italic text-base-content/40">
+          {% translate "No matches yet. Add a monitor to start tracking." %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="lg:col-span-4 flex flex-col gap-6">
+      <div class="editorial-card p-6">
+        <div class="kicker mb-4">{% translate "Top Subreddits" %}</div>
+        {% if overview.top_subreddits %}
+          <ol class="space-y-3">
+            {% for sub in overview.top_subreddits %}
+              <li class="flex items-baseline gap-3 group">
+                <span class="font-mono text-xs text-base-content/40 w-5 tabular-nums">{{ forloop.counter|stringformat:"02d" }}</span>
+                <a href="{% url 'tracking:leads' %}?subreddit={{ sub.name }}"
+                   class="flex-1 font-display text-lg leading-tight tracking-tight hover:text-primary transition truncate" style="font-variation-settings: 'opsz' 24;">r/{{ sub.name }}</a>
+                <span class="font-mono text-sm tabular-nums text-base-content/70">{{ sub.n }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="text-sm font-display italic text-base-content/40">{% translate "No data yet." %}</p>
+        {% endif %}
+      </div>
+      <div class="editorial-card p-6">
+        <div class="kicker mb-4">{% translate "Top Keywords" %}</div>
+        {% if overview.top_keywords %}
+          <ol class="space-y-3">
+            {% for kw in overview.top_keywords %}
+              <li class="flex items-baseline gap-3">
+                <span class="font-mono text-xs text-base-content/40 w-5 tabular-nums">{{ forloop.counter|stringformat:"02d" }}</span>
+                <span class="flex-1 font-mono text-sm leading-tight truncate">{{ kw.name }}</span>
+                <span class="font-mono text-sm tabular-nums text-base-content/70">{{ kw.n }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="text-sm font-display italic text-base-content/40">{% translate "No data yet." %}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
