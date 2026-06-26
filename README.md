@@ -1,35 +1,62 @@
-# ChatterSift — Open-source Reddit monitoring
+# /r by Comergent — Reddit monitoring for go-to-market teams
 
-> Before going further, take 30 seconds to head to **[chattersift.com](https://chattersift.com)** and register a free account to see if it's useful to you. The hosted SaaS is the fastest way to find out — self-hosting is documented below if you'd rather run it yourself.
-
-**Reddit monitoring** for keywords and topics you care about — open source and self-hostable.
-
-![ChatterSift matches view — Reddit posts and comments matching your keyword monitors](docs/images/matches.png)
-
-ChatterSift is an open-source Reddit monitoring app: define keyword monitors across subreddits and get matching posts and comments delivered as alerts. Built as a Django app, HTMX/server-rendered first.
+**/r by Comergent** is a self-hostable Reddit monitoring app: define keyword and semantic monitors across subreddits, get matching posts and comments back as a triageable lead inbox, and reach out before someone else does. Django + HTMX, server-rendered, Celery for background fetching.
 
 ## Features
 
-- **Keyword matching** — exact phrases, word boundaries, or regex across post titles, bodies, and comments, with negative filters to kill false positives.
-- **Multi-subreddit monitoring** — one monitor configuration covers every community on its list. Scale from five subreddits to five hundred without rewriting a rule.
-- **Instant email alerts** — matches delivered to your inbox within minutes. Per-keyword rate limits keep things usable.
-- **Your data, your control** — use the hosted SaaS or self-host the open source. Either way, your keywords and match history stay in your stack.
-- **Background processing** — Celery workers with retries and back-pressure. The monitor doesn't sleep, and alerts don't pile up.
-- **Open source, MIT-licensed** — read it, fork it, extend it. No lock-in.
+- **Keyword monitors** — exact phrases, word-boundary matches, or hybrid keyword + semantic descriptions, per subreddit.
+- **Lead inbox** — every match lands in a list/detail Leads view; mark contacted, drill in from any monitor chip.
+- **Run log** — every fetch (manual, scheduled, or auto) recorded with status, match count, and duration in UTC.
+- **Multi-subreddit** — one configuration covers as many communities as you track.
+- **Email alerts** — Postmark / SES / Mailgun via Anymail; per-subreddit notification cadence.
+- **Background processing** — Celery workers with retries; periodic fetches via Celery beat.
+- **Open source** — MIT-licensed. Read it, fork it, run it on your own infrastructure.
 
 ## Self-Hosted Deployment
 
-ChatterSift is designed to run on a single VPS with Docker Compose. Caddy terminates HTTPS, Postgres and Redis run as internal services on named volumes, and migrations run automatically before Django and Celery start.
+The app is designed to run on a single VPS with Docker Compose. Caddy terminates HTTPS, Postgres and Redis run as internal services on named volumes, and migrations run automatically before Django and Celery start.
 
-### Requirements
+### Infrastructure requirements
 
-You only need these on the VPS itself — everything else (Python, Node, Postgres, Redis) runs inside containers.
+You only need a Linux host with Docker — every runtime (Python, Node, Postgres, Redis) runs in containers.
 
-- **VPS** with at least **2 GB RAM** and **15 GB disk** (Postgres, Redis, Django, Celery worker, Celery beat, and Caddy all run on the same host).
+**Compute sizing**
+
+| Tier | Use case | vCPU | RAM | Disk |
+|---|---|---|---|---|
+| Tiny (dev / staging) | Single user, 1–2 subreddits | 1 | 2 GB | 20 GB SSD |
+| **Small (recommended start)** | Up to ~20 monitors, low traffic | **2** | **4 GB** | **40 GB SSD** |
+| Medium | Dozens of monitors, multi-user | 4 | 8 GB | 80 GB SSD |
+
+Approximate RAM allocation on the small tier: Postgres ~500 MB · Redis ~200 MB · Django/gunicorn ~600 MB · Celery worker ~400 MB · Celery beat ~150 MB · OS + Docker ~500 MB · headroom for fetch bursts.
+
+Disk grows with matched posts (`Match`) and fetch history (`FetchRun`). Expect a few GB per year of Postgres data + WAL at moderate volume.
+
+**Software on the host**
+
+- **Docker Engine** with Compose v2 (`docker compose`, not legacy `docker-compose`)
 - **GNU Make**
-- **Docker** with the Compose v2 plugin (`docker compose`, not `docker-compose`)
-- **Python 3** — stdlib only, used by `scripts/bootstrap-deploy-env`
-- **git** — to clone the repo and pull upgrades
+- **git**
+- **Python 3** (stdlib only — used by `scripts/bootstrap-deploy-env`)
+
+**Networking**
+
+- Public IPv4 + DNS A record on a domain you control
+- Inbound `80` and `443` open (Caddy obtains TLS via Let's Encrypt)
+- Outbound to `reddit.com` / `oauth.reddit.com` and your SMTP provider
+
+**External services**
+
+- **Reddit API credentials** — client ID, secret, and a descriptive user-agent string
+- **Transactional email provider** — Postmark / Mailgun / SendGrid / SES (Anymail-supported)
+- **LLM credentials (optional)** — only required for semantic monitors and the "Generate DM" assist
+- **Domain** — required for HTTPS
+
+**Recommended providers (small tier, monthly ballpark)**
+
+- Hetzner CX22 — 2 vCPU / 4 GB / 40 GB · ~€4
+- DigitalOcean / Linode 4 GB droplet — ~$24
+- AWS Lightsail 4 GB — ~$24
 
 ### First deploy
 
@@ -45,7 +72,8 @@ Edit `.env.production` and set at minimum:
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_CSRF_TRUSTED_ORIGINS`
 - `DJANGO_DEFAULT_FROM_EMAIL` / `DJANGO_SERVER_EMAIL`
-- `CHATTERSIFT_EMAIL_PROVIDER` and the matching provider credentials
+- `CHATTERSIFT_EMAIL_PROVIDER` plus the matching provider credentials
+- Reddit API credentials (`REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT`)
 
 Then bring up the production stack:
 
@@ -82,6 +110,8 @@ make backup                              # snapshot the production database
 make backups                             # list snapshots
 make restore <backup-file>               # restore from a snapshot
 ```
+
+Production-grade backups should be shipped off-box. The compose file ships an `awscli` helper container for S3 sync — wire `make backup` into cron and follow it with `aws s3 cp`.
 
 See [docs/deployment.md](docs/deployment.md) for the full reference, including email provider configuration, LLM credentials, and backup retention.
 
