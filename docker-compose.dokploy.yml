@@ -5,6 +5,9 @@ volumes:
 
 x-django: &django
   image: rbycomergent:latest
+  build:
+    context: .
+    dockerfile: ./compose/production/django/Dockerfile
   depends_on:
     migrate:
       condition: service_completed_successfully
@@ -35,6 +38,9 @@ services:
 
   postgres:
     image: rbycomergent-postgres:latest
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
     env_file:
       - .env
     restart: unless-stopped
