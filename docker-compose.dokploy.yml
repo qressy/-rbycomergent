@@ -4,7 +4,6 @@ volumes:
   redis_data:
 
 x-django: &django
-  image: rbycomergent:latest
   build:
     context: .
     dockerfile: ./compose/production/django/Dockerfile
@@ -37,7 +36,6 @@ services:
     command: /start
 
   postgres:
-    image: rbycomergent-postgres:latest
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
