@@ -68,45 +68,6 @@
       </a>
     </div>
     <div class="navbar-end gap-1 sm:gap-2">
-      <a href="https://comergent.com"
-         class="btn btn-ghost btn-sm gap-1.5 hidden sm:inline-flex"
-         target="_blank"
-         rel="noopener noreferrer">
-        Hosted
-        <svg class="w-3.5 h-3.5 opacity-60"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="2"
-             viewBox="0 0 24 24"
-             aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H8M17 7v9" />
-        </svg>
-      </a>
-      <a href="https://discord.gg/EVkEXvyryN"
-         class="btn btn-ghost btn-sm gap-2"
-         target="_blank"
-         rel="noopener noreferrer"
-         aria-label="Join the /r Discord">
-        <svg class="w-5 h-5"
-             fill="currentColor"
-             viewBox="0 0 50 50"
-             aria-hidden="true">
-          <path d="M42.298,11.65c-0.676-1.021-1.633-1.802-2.768-2.256c-2.464-0.988-4.583-1.648-6.479-2.02 C31.721,7.114,30.404,7.768,29.771,9l-0.158,0.308c-1.404-0.155-2.895-0.207-4.593-0.164c-1.741-0.042-3.237,0.009-4.643,0.164 L20.22,9c-0.633-1.232-1.952-1.885-3.279-1.625c-1.896,0.371-4.016,1.031-6.479,2.02c-1.134,0.454-2.091,1.234-2.768,2.256 c-4.721,7.131-6.571,14.823-5.655,23.517c0.032,0.305,0.202,0.578,0.461,0.741c3.632,2.29,6.775,3.858,9.891,4.936 c1.303,0.455,2.748-0.054,3.517-1.229l1.371-2.101c-1.092-0.412-2.158-0.9-3.18-1.483c-0.479-0.273-0.646-0.884-0.373-1.363 c0.273-0.481,0.884-0.65,1.364-0.373c3.041,1.734,6.479,2.651,9.942,2.651s6.901-0.917,9.942-2.651 c0.479-0.277,1.09-0.108,1.364,0.373c0.273,0.479,0.106,1.09-0.373,1.363c-1.056,0.603-2.16,1.105-3.291,1.524l1.411,2.102 c0.581,0.865,1.54,1.357,2.528,1.357c0.322,0,0.647-0.053,0.963-0.161c3.125-1.079,6.274-2.649,9.914-4.944 c0.259-0.163,0.429-0.437,0.461-0.741C48.869,26.474,47.019,18.781,42.298,11.65z M18.608,28.983c-1.926,0-3.511-2.029-3.511-4.495 c0-2.466,1.585-4.495,3.511-4.495s3.511,2.029,3.511,4.495C22.119,26.954,20.534,28.983,18.608,28.983z M31.601,28.957 c-1.908,0-3.478-2.041-3.478-4.522s1.57-4.522,3.478-4.522c1.908,0,3.478,2.041,3.478,4.522S33.509,28.957,31.601,28.957z" />
-        </svg>
-        <span class="hidden sm:inline">Discord</span>
-      </a>
-      <a href="https://comergent.com"
-         class="btn btn-ghost btn-sm gap-2"
-         target="_blank"
-         rel="noopener noreferrer">
-        <svg class="w-5 h-5"
-             fill="currentColor"
-             viewBox="0 0 24 24"
-             aria-hidden="true">
-          <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
-        </svg>
-        <span class="hidden sm:inline">GitHub</span>
-      </a>
       {% if request.user.is_authenticated %}
         <a href="{% url 'tracking:dashboard' %}" class="btn btn-ghost btn-sm">{% translate "Dashboard" %}</a>
         <a href="{% url 'account_logout' %}" class="btn btn-ghost btn-sm">{% translate "Sign Out" %}</a>
@@ -122,11 +83,15 @@
   <section class="relative overflow-hidden">
     <div class="absolute inset-0 landing-dot-grid opacity-30 pointer-events-none"
          aria-hidden="true"></div>
+    {# Radial primary-tinted glow behind the terminal area, subtle. #}
+    <div class="absolute right-[-10%] top-1/2 -translate-y-1/2 w-[70%] h-[70%] rounded-full bg-primary/10 blur-3xl pointer-events-none hidden lg:block"
+         aria-hidden="true"></div>
     <div class="relative max-w-6xl mx-auto px-6 py-20 lg:py-28">
       <div class="grid lg:grid-cols-2 gap-16 items-center">
         <div class="space-y-7 landing-fade-in">
           <div>
-            <span class="inline-block font-mono text-sm text-primary font-semibold tracking-wide uppercase mb-4">
+            <span class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-primary font-semibold mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
               Self-hosted · MIT licensed
             </span>
             <h1 class="text-4xl lg:text-5xl font-bold leading-tight tracking-tight">
@@ -149,28 +114,27 @@
               <a href="{% url 'account_login' %}"
                  class="btn btn-ghost border border-base-300">Sign in</a>
             {% endif %}
-            <a href="https://comergent.com"
-               class="btn btn-ghost border border-base-300 gap-2"
-               target="_blank"
-               rel="noopener noreferrer">
-              <svg class="w-4 h-4 text-warning"
-                   fill="currentColor"
-                   viewBox="0 0 24 24"
-                   aria-hidden="true">
-                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-              </svg>
-              Star on GitHub
-            </a>
+          </div>
+          {# Small tech chip row — signals the stack in one glance. #}
+          <div class="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs text-base-content/50">
+            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Docker Compose</span>
+            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Postgres</span>
+            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Redis</span>
+            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Celery</span>
           </div>
         </div>
         {# Terminal: the product's voice in 9 lines. #}
         <div class="landing-fade-in [animation-delay:0.15s]">
-          <div class="bg-neutral rounded-lg shadow-2xl overflow-hidden font-mono text-sm border border-base-content/10">
+          <div class="bg-neutral rounded-lg shadow-2xl overflow-hidden font-mono text-sm border border-base-content/10 ring-1 ring-primary/10">
             <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10">
               <div class="w-3 h-3 rounded-full bg-error/80"></div>
               <div class="w-3 h-3 rounded-full bg-warning/80"></div>
               <div class="w-3 h-3 rounded-full bg-success/80"></div>
               <span class="ml-2 text-neutral-content/50 text-xs font-display tracking-tight">/r · live</span>
+              <span class="ml-auto inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-success/80">
+                <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+                connected
+              </span>
             </div>
             <div class="p-5 space-y-3 text-neutral-content/90">
               <div class="text-neutral-content/50">
@@ -206,77 +170,6 @@
       </div>
     </div>
   </section>
-  {# Destinations: the only three places someone on this page should ever need to go. #}
-  <section class="border-t border-base-300 bg-base-200/60">
-    <div class="max-w-6xl mx-auto px-6 py-14">
-      <div class="font-mono text-xs uppercase tracking-[0.18em] text-base-content/50 mb-6"># destinations</div>
-      <div class="grid sm:grid-cols-3 gap-px bg-base-300 border border-base-300 rounded-lg overflow-hidden">
-        <a href="https://comergent.com"
-           class="group bg-base-100 hover:bg-base-100 p-6 flex flex-col gap-2 transition-colors"
-           target="_blank"
-           rel="noopener noreferrer">
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs uppercase tracking-wider text-primary">01 · hosted</span>
-            <svg class="w-4 h-4 text-base-content/30 group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all"
-                 fill="none"
-                 stroke="currentColor"
-                 stroke-width="2"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H8M17 7v9" />
-            </svg>
-          </div>
-          <div class="text-lg font-semibold tracking-tight">comergent.com</div>
-          <p class="text-sm text-base-content/60 leading-relaxed">
-            The managed version. We run the infrastructure; you get monitors,
-            keywords, and alerts without the deploy.
-          </p>
-        </a>
-        <a href="https://comergent.com"
-           class="group bg-base-100 p-6 flex flex-col gap-2 transition-colors"
-           target="_blank"
-           rel="noopener noreferrer">
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs uppercase tracking-wider text-accent">02 · source</span>
-            <svg class="w-4 h-4 text-base-content/30 group-hover:text-accent group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all"
-                 fill="none"
-                 stroke="currentColor"
-                 stroke-width="2"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H8M17 7v9" />
-            </svg>
-          </div>
-          <div class="text-lg font-semibold tracking-tight">comergent.com</div>
-          <p class="text-sm text-base-content/60 leading-relaxed">
-            Every line of code. Inspect it, fork it, file an issue, send a
-            patch. Stars help others find it.
-          </p>
-        </a>
-        <a href="https://comergent.com#readme"
-           class="group bg-base-100 p-6 flex flex-col gap-2 transition-colors"
-           target="_blank"
-           rel="noopener noreferrer">
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs uppercase tracking-wider text-success">03 · docs</span>
-            <svg class="w-4 h-4 text-base-content/30 group-hover:text-success group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all"
-                 fill="none"
-                 stroke="currentColor"
-                 stroke-width="2"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H8M17 7v9" />
-            </svg>
-          </div>
-          <div class="text-lg font-semibold tracking-tight">Deployment guide</div>
-          <p class="text-sm text-base-content/60 leading-relaxed">
-            The README walks through environment setup, Postgres, Celery, and
-            the Reddit credentials you'll need.
-          </p>
-        </a>
-      </div>
-    </div>
-  </section>
   {# Footer: brand + license + a single trailing link. #}
   <footer class="border-t border-base-300 bg-base-100">
     <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-base-content/55">
@@ -297,16 +190,6 @@
         <span class="font-mono text-xs text-base-content/40">· MIT</span>
       </div>
       <div class="flex items-center gap-4 font-mono text-xs">
-        <a href="https://comergent.com"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="hover:text-primary transition-colors">comergent.com</a>
-        <span class="text-base-content/25">/</span>
-        <a href="https://comergent.com"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="hover:text-primary transition-colors">github</a>
-        <span class="text-base-content/25">/</span>
         <a href="https://discord.gg/EVkEXvyryN"
            target="_blank"
            rel="noopener noreferrer"

@@ -1,3 +1,5 @@
+name: rbycomergent
+
 volumes:
   production_postgres_data: {}
   production_postgres_data_backups: {}
@@ -9,7 +11,7 @@ volumes:
 
 
 x-django: &django
-  image: chattersift_production_django
+  image: rbycomergent_production_django
   depends_on:
     migrate:
       condition: service_completed_successfully
@@ -42,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
-    image: chattersift_production_postgres
+    image: rbycomergent_production_postgres
     volumes:
       - production_postgres_data:/var/lib/postgresql/data
       - production_postgres_data_backups:/backups
@@ -56,7 +58,7 @@ services:
 
   migrate:
     <<: *django
-    image: chattersift_production_django
+    image: rbycomergent_production_django
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,7 +74,7 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/caddy/Dockerfile
-    image: chattersift_production_caddy
+    image: rbycomergent_production_caddy
     depends_on:
       django:
         condition: service_healthy
@@ -100,14 +102,14 @@ services:
 
   celeryworker:
     <<: *django
-    image: chattersift_production_django
+    image: rbycomergent_production_django
     command: /start-celeryworker
     healthcheck:
       disable: true
 
   celerybeat:
     <<: *django
-    image: chattersift_production_django
+    image: rbycomergent_production_django
     command: /start-celerybeat
     healthcheck:
       disable: true
