@@ -31,11 +31,13 @@ x-django: &django
 services:
   django:
     <<: *django
+    container_name: rslash-django
     expose:
       - "5000"
     command: /start
 
   postgres:
+    container_name: rslash-postgres
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
@@ -53,6 +55,7 @@ services:
 
   migrate:
     <<: *django
+    container_name: rslash-migrate
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +67,7 @@ services:
       disable: true
 
   redis:
+    container_name: rslash-redis
     image: docker.io/redis:7.2
     restart: unless-stopped
     volumes:
@@ -76,12 +80,14 @@ services:
 
   celeryworker:
     <<: *django
+    container_name: rslash-celeryworker
     command: /start-celeryworker
     healthcheck:
       disable: true
 
   celerybeat:
     <<: *django
+    container_name: rslash-celerybeat
     command: /start-celerybeat
     healthcheck:
       disable: true
