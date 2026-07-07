@@ -431,7 +431,7 @@ ACCOUNT_RATE_LIMITS = {
     "reset_password": "5/10m/ip,3/h/key",
     "reauthenticate": "5/10m/user",
     "reset_password_from_key": "5/10m/ip",
-    "signup": "5/h/ip,20/d/ip",
+    "signup": env("DJANGO_ACCOUNT_SIGNUP_RATE_LIMIT", default="5/h/ip,20/d/ip").strip(),
     "login": "10/5m/ip",
     "login_failed": "5/10m/ip,3/10m/key",
     "confirm_email": "1/10m/key",
