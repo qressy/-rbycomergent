@@ -417,7 +417,11 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 # https://docs.allauth.org/en/latest/account/configuration.html
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 # https://docs.allauth.org/en/latest/account/configuration.html
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION = env(
+    "DJANGO_ACCOUNT_EMAIL_VERIFICATION",
+    default="mandatory",
+)
+assert ACCOUNT_EMAIL_VERIFICATION in {"mandatory", "optional", "none"}
 # https://docs.allauth.org/en/latest/account/rate_limits.html
 # Interface: allauth consumes these by action name to protect account workflows.
 ACCOUNT_RATE_LIMITS = {

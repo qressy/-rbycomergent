@@ -25,6 +25,7 @@ Required user-edited values:
 Optional toggles:
 
 - `DJANGO_ACCOUNT_ALLOW_REGISTRATION`: set to `False` to disable public signups.
+- `DJANGO_ACCOUNT_EMAIL_VERIFICATION`: `mandatory`, `optional`, or `none`. Set `none` if you want signup to complete immediately without email verification.
 - `WEB_CONCURRENCY`: Gunicorn worker count (default `1`).
 - `CELERY_WORKER_CONCURRENCY`: Celery worker concurrency (default `1`).
 
