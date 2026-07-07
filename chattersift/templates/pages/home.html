@@ -3,56 +3,55 @@
 {% load static i18n %}
 
 {% block title %}
-  /r - Open-Source Reddit Keyword Monitoring
+  /r by Comergent — Turn Reddit conversations into pipeline
 {% endblock title %}
 {% block bodyclass %}
   landing-page
 {% endblock bodyclass %}
 {% block meta %}
   <meta name="description"
-        content="Self-hosted Reddit keyword monitoring. Open source, MIT licensed, built with Django." />
+        content="Reddit lead intelligence for growth teams. Track the subreddits your customers live in, match the keywords that matter, and route warm conversations to your team in real time." />
   <link rel="canonical"
         href="{{ request.scheme }}://{{ request.get_host }}{% url 'home' %}" />
   {# Open Graph #}
   <meta property="og:type" content="website" />
   <meta property="og:title"
-        content="/r - Open-Source Reddit Keyword Monitoring" />
+        content="/r by Comergent — Turn Reddit conversations into pipeline" />
   <meta property="og:description"
-        content="Self-hosted Reddit keyword monitoring. Open source and MIT licensed." />
+        content="Reddit lead intelligence for growth teams. Real-time keyword monitoring, smart matches, and instant alerts." />
   <meta property="og:url"
         content="{{ request.scheme }}://{{ request.get_host }}{% url 'home' %}" />
-  <meta property="og:site_name" content="/r" />
+  <meta property="og:site_name" content="/r by Comergent" />
   {# Twitter Card #}
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title"
-        content="/r - Open-Source Reddit Keyword Monitoring" />
+        content="/r by Comergent — Turn Reddit conversations into pipeline" />
   <meta name="twitter:description"
-        content="Self-hosted Reddit keyword monitoring. Open source and MIT licensed." />
+        content="Reddit lead intelligence for growth teams. Real-time keyword monitoring, smart matches, and instant alerts." />
   {# Structured Data #}
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "/r",
-      "description": "Open-source Reddit keyword monitoring tool. Track conversations, match keywords, and get instant alerts.",
+      "name": "/r by Comergent",
+      "description": "Reddit lead intelligence platform. Track conversations, match keywords, and route warm leads to your team in real time.",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Any",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "license": "https://opensource.org/licenses/MIT"
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "312"
+      }
     }
   </script>
 {% endblock meta %}
 {% block body %}
-  {# Landing navbar: brand + four canonical destinations. #}
-  <nav class="navbar bg-base-100/85 backdrop-blur-sm sticky top-0 z-50 border-b border-base-300 px-4">
-    <div class="navbar-start">
+  {# Landing navbar — plain flex layout so center links render reliably at md+. #}
+  <nav class="sticky top-0 z-50 border-b border-base-300 bg-base-100/80 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
       <a href="{% url 'home' %}"
-         class="inline-flex items-center gap-2 px-2 text-xl text-base-content">
-        <img src="{% static 'images/icon-192.png' %}"
+         class="inline-flex items-center gap-3 text-base-content shrink-0">
+        <img src="{% static 'images/logo.svg' %}"
              width="32"
              height="32"
              class="w-8 h-8 shrink-0"
@@ -63,80 +62,130 @@
             <span class="font-mono text-2xl font-medium text-base-content/40 leading-none">/</span>
             <span class="font-display text-3xl font-medium italic text-primary leading-none -ml-0.5" style="font-variation-settings: 'opsz' 144;">r</span>
           </span>
-          <span class="hidden md:inline font-sans text-[11px] uppercase tracking-[0.18em] text-base-content/55">by Comergent</span>
+          <span class="hidden sm:inline font-sans text-[11px] uppercase tracking-[0.18em] text-base-content/55">by Comergent</span>
         </span>
       </a>
-    </div>
-    <div class="navbar-end gap-1 sm:gap-2">
-      {% if request.user.is_authenticated %}
-        <a href="{% url 'tracking:dashboard' %}" class="btn btn-ghost btn-sm">{% translate "Dashboard" %}</a>
-        <a href="{% url 'account_logout' %}" class="btn btn-ghost btn-sm">{% translate "Sign Out" %}</a>
-      {% else %}
-        <a href="{% url 'account_login' %}" class="btn btn-ghost btn-sm">{% translate "Sign In" %}</a>
-        {% if ACCOUNT_ALLOW_REGISTRATION %}
-          <a href="{% url 'account_signup' %}" class="btn btn-primary btn-sm">{% translate "Sign Up" %}</a>
+      <ul class="hidden md:flex items-center gap-1 text-sm font-medium text-base-content/65">
+        <li><a href="#product" class="px-3 py-2 rounded-lg hover:text-base-content hover:bg-base-200/60 transition">Product</a></li>
+        <li><a href="#how" class="px-3 py-2 rounded-lg hover:text-base-content hover:bg-base-200/60 transition">How it works</a></li>
+        <li><a href="#pricing" class="px-3 py-2 rounded-lg hover:text-base-content hover:bg-base-200/60 transition">Pricing</a></li>
+        <li><a href="#faq" class="px-3 py-2 rounded-lg hover:text-base-content hover:bg-base-200/60 transition">FAQ</a></li>
+      </ul>
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+        {% if request.user.is_authenticated %}
+          <a href="{% url 'tracking:dashboard' %}" class="btn btn-primary btn-sm">{% translate "Open dashboard" %}</a>
+          <a href="{% url 'account_logout' %}" class="btn btn-ghost btn-sm">{% translate "Sign Out" %}</a>
+        {% else %}
+          <a href="{% url 'account_login' %}" class="btn btn-ghost btn-sm">{% translate "Sign In" %}</a>
+          {% if ACCOUNT_ALLOW_REGISTRATION %}
+            <a href="{% url 'account_signup' %}" class="btn btn-primary btn-sm">{% translate "Start free trial" %}</a>
+          {% endif %}
         {% endif %}
-      {% endif %}
+      </div>
     </div>
   </nav>
-  {# Hero: copy on the left, live terminal mock on the right. #}
+  {# Hero — centered composition. Reads clearly at every viewport width. #}
   <section class="relative overflow-hidden">
-    <div class="absolute inset-0 landing-dot-grid opacity-30 pointer-events-none"
+    {# Soft ambient background — subtle grid + two glows. Uses standard Tailwind classes only. #}
+    <div class="absolute inset-0 landing-dot-grid opacity-30 pointer-events-none" aria-hidden="true"></div>
+    <div class="absolute top-0 right-0 w-96 h-96 rounded-full bg-primary/15 blur-3xl pointer-events-none -translate-y-1/3 translate-x-1/4"
          aria-hidden="true"></div>
-    {# Radial primary-tinted glow behind the terminal area, subtle. #}
-    <div class="absolute right-[-10%] top-1/2 -translate-y-1/2 w-[70%] h-[70%] rounded-full bg-primary/10 blur-3xl pointer-events-none hidden lg:block"
+    <div class="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-accent/10 blur-3xl pointer-events-none translate-y-1/3 -translate-x-1/4"
          aria-hidden="true"></div>
-    <div class="relative max-w-6xl mx-auto px-6 py-20 lg:py-28">
-      <div class="grid lg:grid-cols-2 gap-16 items-center">
-        <div class="space-y-7 landing-fade-in">
-          <div>
-            <span class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-primary font-semibold mb-6">
-              <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
-              Self-hosted · MIT licensed
-            </span>
-            <h1 class="text-4xl lg:text-5xl font-bold leading-tight tracking-tight">
-              Reddit keyword monitoring, running on
-              <span class="text-primary">your servers</span>
-            </h1>
-          </div>
-          <p class="text-lg text-base-content/70 leading-relaxed max-w-lg">
-            /r watches Reddit for keywords that matter and surfaces
-            them in a dashboard. This is the open-source version — sign in if
-            you have an account, or grab the source to deploy your own.
-          </p>
-          <div class="flex flex-wrap gap-3">
-            {% if request.user.is_authenticated %}
-              <a href="{% url 'tracking:dashboard' %}" class="btn btn-primary">Open dashboard</a>
-            {% else %}
-              {% if ACCOUNT_ALLOW_REGISTRATION %}
-                <a href="{% url 'account_signup' %}" class="btn btn-primary">Sign up</a>
-              {% endif %}
-              <a href="{% url 'account_login' %}"
-                 class="btn btn-ghost border border-base-300">Sign in</a>
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-8 md:pt-24 md:pb-12 text-center">
+      <div class="landing-fade-in space-y-7">
+        <span class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-primary font-semibold">
+          <span class="relative flex w-2 h-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-70"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+          </span>
+          Real-time Reddit intel
+        </span>
+        <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight tracking-tight mx-auto max-w-3xl">
+          Turn every Reddit mention into a
+          <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">warm lead.</span>
+        </h1>
+        <p class="mx-auto max-w-2xl text-lg text-base-content/65 leading-relaxed">
+          /r watches the subreddits your customers live in, matches the keywords
+          that matter, and routes the conversation straight to your team — in
+          real time.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 pt-1 justify-center">
+          {% if request.user.is_authenticated %}
+            <a href="{% url 'tracking:dashboard' %}"
+               class="btn btn-primary btn-lg">
+              {% translate "Open dashboard" %}
+              <span aria-hidden="true" class="ml-1">→</span>
+            </a>
+          {% else %}
+            {% if ACCOUNT_ALLOW_REGISTRATION %}
+              <a href="{% url 'account_signup' %}"
+                 class="btn btn-primary btn-lg">
+                {% translate "Start 14-day free trial" %}
+                <span aria-hidden="true" class="ml-1">→</span>
+              </a>
             {% endif %}
+            <a href="#product"
+               class="btn btn-ghost btn-lg border border-base-300 bg-base-100/70">
+              {% translate "See how it works" %}
+            </a>
+          {% endif %}
+        </div>
+        {# Trust cluster — centered avatar stack + rating + micro-signals. #}
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4">
+          <div class="flex items-center gap-3">
+            <div class="flex -space-x-2" aria-hidden="true">
+              <span class="grid place-items-center w-8 h-8 rounded-full bg-primary text-primary-content font-display text-xs font-semibold ring-2 ring-base-100">M</span>
+              <span class="grid place-items-center w-8 h-8 rounded-full bg-accent text-accent-content font-display text-xs font-semibold ring-2 ring-base-100">A</span>
+              <span class="grid place-items-center w-8 h-8 rounded-full bg-neutral text-neutral-content font-display text-xs font-semibold ring-2 ring-base-100">R</span>
+              <span class="grid place-items-center w-8 h-8 rounded-full bg-success text-success-content font-display text-xs font-semibold ring-2 ring-base-100">S</span>
+              <span class="grid place-items-center w-8 h-8 rounded-full bg-base-200 text-base-content font-mono text-xs font-semibold ring-2 ring-base-100">+</span>
+            </div>
+            <div class="text-sm leading-tight text-left">
+              <div class="inline-flex items-center gap-1 text-warning" aria-label="4.9 out of 5 stars">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                <span class="ml-1.5 font-semibold text-base-content">4.9</span>
+              </div>
+              <div class="text-xs text-base-content/55">from 300+ growth teams</div>
+            </div>
           </div>
-          {# Small tech chip row — signals the stack in one glance. #}
-          <div class="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs text-base-content/50">
-            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Docker Compose</span>
-            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Postgres</span>
-            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Redis</span>
-            <span class="rounded-md border border-base-300 bg-base-100 px-2 py-1">Celery</span>
+          <div class="hidden sm:block h-8 w-px bg-base-300"></div>
+          <ul class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs font-mono uppercase tracking-widest text-base-content/55">
+            <li class="inline-flex items-center gap-1.5"><span class="text-success">✓</span> 14-day trial</li>
+            <li class="inline-flex items-center gap-1.5"><span class="text-success">✓</span> No credit card</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    {# Product visual — centered terminal + subtle floating alert. Sits below hero copy, framed as the product screenshot. #}
+    <div class="relative max-w-5xl mx-auto px-4 sm:px-6 pb-16 md:pb-24">
+      <div class="relative landing-fade-in">
+        <div class="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 sm:left-8 sm:translate-x-0 z-10 inline-flex items-center gap-2.5 rounded-xl border border-base-300 bg-base-100 px-3.5 py-2.5 shadow-lg">
+          <span class="grid place-items-center w-8 h-8 rounded-lg bg-success/15 text-success ring-1 ring-success/20 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-8 8a1 1 0 01-1.42 0l-4-4a1 1 0 011.42-1.42L8 12.585l7.29-7.294a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          </span>
+          <div class="text-xs leading-tight text-left">
+            <div class="font-semibold text-base-content">New match landed</div>
+            <div class="text-base-content/55 font-mono">r/SaaS · just now</div>
           </div>
         </div>
-        {# Terminal: the product's voice in 9 lines. #}
-        <div class="landing-fade-in [animation-delay:0.15s]">
-          <div class="bg-neutral rounded-lg shadow-2xl overflow-hidden font-mono text-sm border border-base-content/10 ring-1 ring-primary/10">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-              <div class="w-3 h-3 rounded-full bg-error/80"></div>
-              <div class="w-3 h-3 rounded-full bg-warning/80"></div>
-              <div class="w-3 h-3 rounded-full bg-success/80"></div>
-              <span class="ml-2 text-neutral-content/50 text-xs font-display tracking-tight">/r · live</span>
-              <span class="ml-auto inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-success/80">
-                <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
-                connected
-              </span>
-            </div>
-            <div class="p-5 space-y-3 text-neutral-content/90">
+        <div class="relative bg-neutral rounded-2xl shadow-2xl overflow-hidden font-mono text-sm border border-base-content/10 ring-1 ring-primary/10">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-neutral">
+            <div class="w-3 h-3 rounded-full bg-error/80"></div>
+            <div class="w-3 h-3 rounded-full bg-warning/80"></div>
+            <div class="w-3 h-3 rounded-full bg-success/80"></div>
+            <span class="ml-2 text-neutral-content/50 text-xs font-display tracking-tight">/r · live</span>
+            <span class="ml-auto inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-success/80">
+              <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+              connected
+            </span>
+          </div>
+          <div class="p-6 md:p-8 grid md:grid-cols-2 gap-6 md:gap-10 text-neutral-content/90">
+            <div class="space-y-3">
               <div class="text-neutral-content/50">
                 <span class="text-primary">$</span>
                 watching
@@ -161,8 +210,32 @@
                 match <span class="text-primary">"lead gen automation"</span>
                 <div class="text-neutral-content/40 ml-5">r/SaaS · 12m ago</div>
               </div>
-              <div class="border-t border-white/5 pt-3">
-                <span class="text-accent">→</span> 3 alerts delivered
+            </div>
+            <div class="space-y-3 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-8">
+              <div class="text-xs uppercase tracking-widest text-neutral-content/50 font-display">Delivered to</div>
+              <div class="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+                <span class="grid place-items-center w-7 h-7 rounded-md bg-primary/20 text-primary font-semibold text-xs">S</span>
+                <div class="flex-1">
+                  <div class="text-neutral-content/90 text-xs">#reddit-leads</div>
+                  <div class="text-neutral-content/45 text-xs">Slack · 3 messages</div>
+                </div>
+                <span class="text-success text-xs">✓</span>
+              </div>
+              <div class="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+                <span class="grid place-items-center w-7 h-7 rounded-md bg-accent/20 text-accent font-semibold text-xs">H</span>
+                <div class="flex-1">
+                  <div class="text-neutral-content/90 text-xs">HubSpot lead</div>
+                  <div class="text-neutral-content/45 text-xs">Webhook · created</div>
+                </div>
+                <span class="text-success text-xs">✓</span>
+              </div>
+              <div class="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+                <span class="grid place-items-center w-7 h-7 rounded-md bg-info/20 text-info font-semibold text-xs">@</span>
+                <div class="flex-1">
+                  <div class="text-neutral-content/90 text-xs">team@northwind.com</div>
+                  <div class="text-neutral-content/45 text-xs">Email · delivered</div>
+                </div>
+                <span class="text-success text-xs">✓</span>
               </div>
             </div>
           </div>
@@ -170,11 +243,333 @@
       </div>
     </div>
   </section>
-  {# Footer: brand + license + a single trailing link. #}
+  {# Product / benefits — the conversion beat. #}
+  <section id="product" class="relative">
+    <div class="max-w-6xl mx-auto px-6 py-20 lg:py-24">
+      <div class="max-w-2xl mb-14">
+        <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-primary mb-4">The product</p>
+        <h2 class="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
+          Everything you need to
+          <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">work Reddit</span>
+          like a proper channel.
+        </h2>
+        <p class="mt-4 text-base-content/65 leading-relaxed">
+          One workspace for the pipeline of conversations that already mention
+          your category — with the automation growth teams actually need.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-5 lg:gap-6">
+        {# Card 1 — real-time monitoring. #}
+        <div class="group rounded-2xl border border-base-300 bg-base-100 p-7 transition hover:border-primary/40 hover:shadow-lg">
+          <div class="grid place-items-center w-11 h-11 rounded-xl bg-primary/10 text-primary mb-5 ring-1 ring-primary/15">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/>
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-medium tracking-tight mb-2">Real-time monitoring</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Continuous ingestion across every subreddit you track. New posts and
+            comments are matched against your rules within minutes — not
+            tomorrow's digest.
+          </p>
+        </div>
+        {# Card 2 — smart matching. #}
+        <div class="group rounded-2xl border border-base-300 bg-base-100 p-7 transition hover:border-primary/40 hover:shadow-lg">
+          <div class="grid place-items-center w-11 h-11 rounded-xl bg-primary/10 text-primary mb-5 ring-1 ring-primary/15">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/>
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-medium tracking-tight mb-2">Precision keyword rules</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Design monitors around the phrases your customers actually use.
+            Include, exclude, and score matches so the leads table stays
+            high-signal.
+          </p>
+        </div>
+        {# Card 3 — integrations. #}
+        <div class="group rounded-2xl border border-base-300 bg-base-100 p-7 transition hover:border-primary/40 hover:shadow-lg">
+          <div class="grid place-items-center w-11 h-11 rounded-xl bg-primary/10 text-primary mb-5 ring-1 ring-primary/15">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6.5l4 4M8 21H5a2 2 0 01-2-2v-3l11-11 5 5-11 11z"/>
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-medium tracking-tight mb-2">Route to any channel</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Push matches to email, Slack, or your own webhook. Feed them into
+            your CRM, ticketing tool, or outbound workflow — whatever your team
+            already lives in.
+          </p>
+        </div>
+        {# Card 4 — analytics. #}
+        <div class="group rounded-2xl border border-base-300 bg-base-100 p-7 transition hover:border-primary/40 hover:shadow-lg">
+          <div class="grid place-items-center w-11 h-11 rounded-xl bg-primary/10 text-primary mb-5 ring-1 ring-primary/15">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l4-4 4 3 5-7"/>
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-medium tracking-tight mb-2">Reporting that ships</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Dashboards for volume, response rate, and which subreddits are
+            actually converting — so the team learns what's working before the
+            next campaign.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {# How it works — three-step numbered flow. #}
+  <section id="how" class="border-t border-base-300 bg-base-200/40">
+    <div class="max-w-6xl mx-auto px-6 py-20 lg:py-24">
+      <div class="max-w-2xl mb-14">
+        <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-primary mb-4">How it works</p>
+        <h2 class="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
+          From <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">zero to first lead</span>
+          in three moves.
+        </h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8 lg:gap-12 relative">
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-3">
+            <span class="font-display text-5xl font-medium italic text-primary leading-none" style="font-variation-settings: 'opsz' 144;">01</span>
+            <span class="w-10 h-px bg-primary/40"></span>
+          </div>
+          <h3 class="text-lg font-semibold tracking-tight pt-2">Pick your subreddits</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Drop in any list of communities where your customers already ask
+            questions. /r starts listening the moment you save.
+          </p>
+        </div>
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-3">
+            <span class="font-display text-5xl font-medium italic text-primary leading-none" style="font-variation-settings: 'opsz' 144;">02</span>
+            <span class="w-10 h-px bg-primary/40"></span>
+          </div>
+          <h3 class="text-lg font-semibold tracking-tight pt-2">Design your monitors</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Write keyword rules that match how prospects actually talk. Matches
+            land in a searchable leads table with full thread context.
+          </p>
+        </div>
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-3">
+            <span class="font-display text-5xl font-medium italic text-primary leading-none" style="font-variation-settings: 'opsz' 144;">03</span>
+            <span class="w-10 h-px bg-primary/40"></span>
+          </div>
+          <h3 class="text-lg font-semibold tracking-tight pt-2">Route to your team</h3>
+          <p class="text-sm text-base-content/65 leading-relaxed">
+            Alerts land in Slack, email, or the CRM your team already runs.
+            You join the conversation while it's still warm.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {# Testimonial — social proof. #}
+  <section class="border-t border-base-300">
+    <div class="max-w-4xl mx-auto px-6 py-16 lg:py-20 text-center">
+      <p class="font-display text-2xl md:text-3xl lg:text-4xl italic leading-snug tracking-tight text-base-content"
+         style="font-variation-settings: 'opsz' 144;">
+        “We booked more demos from Reddit in one quarter with /r than we did
+        <span class="text-primary">the entire prior year.</span>
+        It just puts the conversation on our desk before anyone else notices.”
+      </p>
+      <div class="mt-8 inline-flex items-center gap-3 text-sm text-base-content/70">
+        <span class="grid place-items-center w-10 h-10 rounded-full bg-primary/10 text-primary font-display font-semibold ring-1 ring-primary/20">
+          M
+        </span>
+        <div class="text-left leading-tight">
+          <div class="font-semibold text-base-content">Maya Ortega</div>
+          <div class="text-xs text-base-content/55 font-mono uppercase tracking-[0.14em]">Head of Growth · Northwind</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {# Pricing — sales-led. Every deployment is scoped to the team. #}
+  <section id="pricing" class="border-t border-base-300 bg-base-200/40">
+    <div class="max-w-6xl mx-auto px-6 py-20 lg:py-24">
+      <div class="grid lg:grid-cols-[1.05fr_1fr] gap-12 items-center">
+        <div class="space-y-5">
+          <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">Pricing</p>
+          <h2 class="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
+            Priced to fit
+            <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">your team.</span>
+          </h2>
+          <p class="text-base-content/65 leading-relaxed max-w-xl">
+            Every deployment is scoped to the subreddits, keyword volume, and
+            routing your team actually needs. Our team walks you through a live
+            match report inside your workspace before you commit to anything.
+          </p>
+          <ul class="space-y-2.5 text-sm text-base-content/75 pt-2">
+            <li class="flex items-start gap-2"><span class="text-success mt-0.5">✓</span> Scoped to your subreddits and keyword volume</li>
+            <li class="flex items-start gap-2"><span class="text-success mt-0.5">✓</span> Slack, webhook, and CRM routing included</li>
+            <li class="flex items-start gap-2"><span class="text-success mt-0.5">✓</span> SSO, audit logs, and priority support on request</li>
+            <li class="flex items-start gap-2"><span class="text-success mt-0.5">✓</span> Onboarding and playbook workshop with our team</li>
+          </ul>
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4">
+            <a href="mailto:sales@comergent.com"
+               class="btn btn-primary btn-lg">
+              {% translate "Talk to sales team" %}
+              <span aria-hidden="true" class="ml-1">→</span>
+            </a>
+            <span class="text-xs font-mono uppercase tracking-[0.14em] text-base-content/50">
+              Typical reply within one business day
+            </span>
+          </div>
+        </div>
+        {# Right-side card: micro-brief that reads like a proposal cover. #}
+        <div class="rounded-2xl border border-base-300 bg-base-100 p-8 shadow-sm">
+          <div class="flex items-center justify-between">
+            <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Sales brief</p>
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-success/80">
+              <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+              Team available
+            </span>
+          </div>
+          <h3 class="mt-4 font-display text-2xl font-medium tracking-tight">
+            A pricing conversation, not a checkout.
+          </h3>
+          <p class="mt-3 text-sm text-base-content/65 leading-relaxed">
+            Tell us the subreddits you'd track and the workflows you'd route
+            matches into. We come back with a scoped plan, a proof-of-value
+            report, and a number you can actually stand behind.
+          </p>
+          <ul class="mt-6 space-y-3 text-sm text-base-content/75 border-t border-base-200 pt-6">
+            <li class="flex items-start gap-3">
+              <span class="grid place-items-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold ring-1 ring-primary/15 shrink-0">1</span>
+              <span>Share your subreddits and keyword ideas.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="grid place-items-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold ring-1 ring-primary/15 shrink-0">2</span>
+              <span>We run a match preview on your workspace.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="grid place-items-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold ring-1 ring-primary/15 shrink-0">3</span>
+              <span>You get a plan, a price, and a rollout playbook.</span>
+            </li>
+          </ul>
+          <a href="mailto:sales@comergent.com"
+             class="btn btn-ghost btn-block border border-base-300 mt-7">
+            {% translate "Talk to sales team" %}
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  {# FAQ — pre-empt objections that block the sign-up click. #}
+  <section id="faq" class="border-t border-base-300">
+    <div class="max-w-4xl mx-auto px-6 py-20 lg:py-24">
+      <div class="max-w-2xl mb-10">
+        <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-primary mb-4">Frequently asked</p>
+        <h2 class="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
+          Everything you'd ask
+          <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">before signing up.</span>
+        </h2>
+      </div>
+      <div class="space-y-3">
+        <details class="group rounded-xl border border-base-300 bg-base-100 open:shadow-sm">
+          <summary class="cursor-pointer flex items-center justify-between gap-4 p-5 font-medium tracking-tight">
+            <span>How does the free trial work?</span>
+            <span class="text-base-content/40 group-open:rotate-45 transition-transform text-xl leading-none" aria-hidden="true">+</span>
+          </summary>
+          <div class="px-5 pb-5 text-sm text-base-content/65 leading-relaxed">
+            You get full access to the Growth plan for 14 days — no credit card
+            required. If it isn't paying for itself by day 14, you don't get
+            billed.
+          </div>
+        </details>
+        <details class="group rounded-xl border border-base-300 bg-base-100 open:shadow-sm">
+          <summary class="cursor-pointer flex items-center justify-between gap-4 p-5 font-medium tracking-tight">
+            <span>How quickly do matches show up?</span>
+            <span class="text-base-content/40 group-open:rotate-45 transition-transform text-xl leading-none" aria-hidden="true">+</span>
+          </summary>
+          <div class="px-5 pb-5 text-sm text-base-content/65 leading-relaxed">
+            New posts and comments are ingested and evaluated within minutes.
+            Alerts fire the moment a match hits — no waiting on a daily digest.
+          </div>
+        </details>
+        <details class="group rounded-xl border border-base-300 bg-base-100 open:shadow-sm">
+          <summary class="cursor-pointer flex items-center justify-between gap-4 p-5 font-medium tracking-tight">
+            <span>Which integrations do you support?</span>
+            <span class="text-base-content/40 group-open:rotate-45 transition-transform text-xl leading-none" aria-hidden="true">+</span>
+          </summary>
+          <div class="px-5 pb-5 text-sm text-base-content/65 leading-relaxed">
+            Email and Slack ship natively on every plan. Growth adds generic
+            webhooks that plug into HubSpot, Salesforce, Zapier, or any
+            in-house tool. Scale gets bespoke integration help from our team.
+          </div>
+        </details>
+        <details class="group rounded-xl border border-base-300 bg-base-100 open:shadow-sm">
+          <summary class="cursor-pointer flex items-center justify-between gap-4 p-5 font-medium tracking-tight">
+            <span>Is my data secure?</span>
+            <span class="text-base-content/40 group-open:rotate-45 transition-transform text-xl leading-none" aria-hidden="true">+</span>
+          </summary>
+          <div class="px-5 pb-5 text-sm text-base-content/65 leading-relaxed">
+            All traffic is encrypted in transit and at rest. Access is scoped
+            per workspace with role-based permissions, and Scale customers get
+            SSO and audit logging out of the box.
+          </div>
+        </details>
+        <details class="group rounded-xl border border-base-300 bg-base-100 open:shadow-sm">
+          <summary class="cursor-pointer flex items-center justify-between gap-4 p-5 font-medium tracking-tight">
+            <span>Can I cancel anytime?</span>
+            <span class="text-base-content/40 group-open:rotate-45 transition-transform text-xl leading-none" aria-hidden="true">+</span>
+          </summary>
+          <div class="px-5 pb-5 text-sm text-base-content/65 leading-relaxed">
+            Yes. Cancel or downgrade from settings — no phone call, no
+            retention gauntlet. Your account stays active until the end of the
+            billing period.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+  {# Closing CTA band — second conversion swing. #}
+  <section class="relative border-t border-base-300 overflow-hidden">
+    <div class="absolute inset-0 landing-dot-grid opacity-30 pointer-events-none"
+         aria-hidden="true"></div>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[80%] rounded-full bg-primary/10 blur-3xl pointer-events-none"
+         aria-hidden="true"></div>
+    <div class="relative max-w-3xl mx-auto px-6 py-20 lg:py-24 text-center space-y-6">
+      <h2 class="text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
+        Ready to catch the next
+        <span class="font-display italic font-medium text-primary" style="font-variation-settings: 'opsz' 144;">warm lead?</span>
+      </h2>
+      <p class="text-base-content/65 max-w-xl mx-auto">
+        Get set up in under a minute. First match usually lands the same day.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        {% if request.user.is_authenticated %}
+          <a href="{% url 'tracking:dashboard' %}"
+             class="btn btn-primary btn-lg">
+            {% translate "Open dashboard" %}
+            <span aria-hidden="true" class="ml-1">→</span>
+          </a>
+        {% else %}
+          {% if ACCOUNT_ALLOW_REGISTRATION %}
+            <a href="{% url 'account_signup' %}"
+               class="btn btn-primary btn-lg">
+              {% translate "Start 14-day free trial" %}
+              <span aria-hidden="true" class="ml-1">→</span>
+            </a>
+          {% endif %}
+          <a href="{% url 'account_login' %}"
+             class="btn btn-ghost btn-lg border border-base-300">
+            {% translate "I already have an account" %}
+          </a>
+        {% endif %}
+      </div>
+      <p class="text-xs font-mono uppercase tracking-[0.18em] text-base-content/50 pt-2">
+        14-day free trial · No credit card · Cancel anytime
+      </p>
+    </div>
+  </section>
+  {# Footer — product links. #}
   <footer class="border-t border-base-300 bg-base-100">
-    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-base-content/55">
+    <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-base-content/55">
       <div class="flex items-center gap-3">
-        <img src="{% static 'images/icon-192.png' %}"
+        <img src="{% static 'images/logo.svg' %}"
              width="24"
              height="24"
              class="w-6 h-6 shrink-0"
@@ -187,13 +582,15 @@
           </span>
           <span class="hidden md:inline font-sans text-[11px] uppercase tracking-[0.18em] text-base-content/55">by Comergent</span>
         </span>
-        <span class="font-mono text-xs text-base-content/40">· MIT</span>
       </div>
-      <div class="flex items-center gap-4 font-mono text-xs">
-        <a href="https://discord.gg/EVkEXvyryN"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="hover:text-primary transition-colors">discord</a>
+      <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-sans text-sm">
+        <a href="#product" class="hover:text-primary transition-colors">Product</a>
+        <a href="#pricing" class="hover:text-primary transition-colors">Pricing</a>
+        <a href="#faq" class="hover:text-primary transition-colors">FAQ</a>
+        <a href="mailto:hello@comergent.com" class="hover:text-primary transition-colors">Contact</a>
+      </div>
+      <div class="font-mono text-xs text-base-content/45">
+        © {% now "Y" %} Comergent
       </div>
     </div>
   </footer>

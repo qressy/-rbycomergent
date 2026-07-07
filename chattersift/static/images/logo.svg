@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="/r by Comergent">
+  <rect width="64" height="64" rx="14" fill="oklch(56% 0.22 258)"/>
+  <text x="14" y="46"
+        font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="30"
+        font-weight="500"
+        fill="rgba(255,255,255,0.65)">/</text>
+  <text x="30" y="48"
+        font-family="'Fraunces', Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="40"
+        font-weight="600"
+        fill="#ffffff">r</text>
+</svg>
