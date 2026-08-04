@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import sys
+import time
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
@@ -16,6 +19,14 @@ from .parsers import parse_reddit_atom_response
 from .parsers import parse_reddit_json_response
 
 logger = logging.getLogger(__name__)
+
+
+def _diag(msg: str) -> None:
+    """Print diagnostic to stdout directly, bypassing logging config."""
+    print(f"[DIAG pid={os.getpid()} t={time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    sys.stdout.flush()
+
+
 REDDIT_BASE_URL = "https://www.reddit.com"
 # Public Reddit endpoints are requested without OAuth in core mode. Reddit may
 # throttle or block high-volume unauthenticated traffic; User-Agent is required.
@@ -109,18 +120,27 @@ async def _send_request(
 ) -> httpx.Response:
     """Execute one Reddit request and normalize transport/status failures."""
     full_url = f"{client.base_url}{request_spec.path}?{urlencode(request_spec.params)}"
-    logger.info("reddit HTTP GET %s ua=%r", full_url, headers.get("User-Agent"))
+    ua = headers.get("User-Agent")
+    _diag(f"HTTP GET {full_url} ua={ua!r} timeout={client.timeout}")
+    logger.info("reddit HTTP GET %s ua=%r", full_url, ua)
+    req_started = time.monotonic()
     try:
         response = await client.get(request_spec.path, params=request_spec.params, headers=headers)
     except httpx.TimeoutException as error:
+        elapsed = time.monotonic() - req_started
+        _diag(f"HTTP TIMEOUT after {elapsed:.2f}s url={full_url} error={_format_httpx_error(error)}")
         logger.warning("reddit HTTP timeout url=%s error=%s", full_url, _format_httpx_error(error))
         msg = f"Reddit request timed out: {_format_httpx_error(error)}"
         raise RedditTimeoutError(msg) from error
     except httpx.TransportError as error:
+        elapsed = time.monotonic() - req_started
+        _diag(f"HTTP TRANSPORT ERROR after {elapsed:.2f}s url={full_url} error={_format_httpx_error(error)}")
         logger.warning("reddit HTTP transport error url=%s error=%s", full_url, _format_httpx_error(error))
         msg = f"Reddit transport error: {_format_httpx_error(error)}"
         raise RedditTransportError(msg) from error
 
+    elapsed = time.monotonic() - req_started
+    _diag(f"HTTP response status={response.status_code} bytes={len(response.content)} in {elapsed:.2f}s url={full_url}")
     logger.info(
         "reddit HTTP response status=%s bytes=%s url=%s",
         response.status_code,

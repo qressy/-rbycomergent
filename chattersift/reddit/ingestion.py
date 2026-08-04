@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
+import sys
+import time
 from email.utils import getaddresses
 from typing import TYPE_CHECKING
 
@@ -37,6 +40,12 @@ if TYPE_CHECKING:
 MISSING_PAYLOAD_FIELD = "Payload is missing a required RedditItem field."
 logger = logging.getLogger(__name__)
 ADMIN_TUPLE_LENGTH = 2
+
+
+def _diag(msg: str) -> None:
+    """Print diagnostic to stdout directly, bypassing logging config."""
+    print(f"[DIAG pid={os.getpid()} t={time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    sys.stdout.flush()
 
 
 def fetch_feed_normalize_and_match(
@@ -102,10 +111,14 @@ def fetch_due_feeds(
     fetched_count = 0
     cached_count = 0
     matched_count = 0
+    _diag(f"fetch_due_feeds: calling get_due_feed_specs(lane={lane}, limit={limit})")
     due_specs = get_due_feed_specs(limit=limit, lane=lane)
+    _diag(f"fetch_due_feeds: got {len(due_specs)} due specs: {[f'r/{s.subreddit}({s.kind}/{s.format})' for s in due_specs]}")
 
     for spec in due_specs:
         attempted_count += 1
+        spec_started = time.monotonic()
+        _diag(f"fetch_due_feeds: [{attempted_count}/{len(due_specs)}] fetching r/{spec.subreddit} kind={spec.kind} format={spec.format}")
         try:
             result = fetch_feed_normalize_and_match(
                 spec,
@@ -115,6 +128,8 @@ def fetch_due_feeds(
                 semantic_matcher=semantic_matcher,
             )
         except Exception as error:  # noqa: BLE001
+            spec_elapsed = time.monotonic() - spec_started
+            _diag(f"fetch_due_feeds: FAILED r/{spec.subreddit} after {spec_elapsed:.2f}s: {error.__class__.__name__}: {error}")
             logger.warning(
                 (
                     "Reddit feed fetch failed; lane=%s kind=%s format=%s subreddit=%s "
@@ -132,6 +147,8 @@ def fetch_due_feeds(
             failed_count += 1
             continue
 
+        spec_elapsed = time.monotonic() - spec_started
+        _diag(f"fetch_due_feeds: OK r/{spec.subreddit} fetched={result.fetched_count} cached={result.cached_count} matched={result.matched_count} in {spec_elapsed:.2f}s")
         succeeded_count += 1
         fetched_count += result.fetched_count
         cached_count += result.cached_count
