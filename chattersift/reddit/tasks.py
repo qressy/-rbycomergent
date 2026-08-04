@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 
 from celery import shared_task
@@ -10,6 +11,8 @@ from .models import RedditItem
 from .policy import DEFAULT_REDDIT_COLLECTION_LANE
 from .services import fetch_normalize_and_match
 
+logger = logging.getLogger(__name__)
+
 
 @shared_task()
 def fetch_due_reddit_feeds(
@@ -17,7 +20,10 @@ def fetch_due_reddit_feeds(
     lane: str = DEFAULT_REDDIT_COLLECTION_LANE,
 ) -> dict:
     """Fetch currently due Reddit feeds through the synchronous core pipeline."""
-    return asdict(fetch_due_feeds(limit=limit, lane=lane))
+    logger.info("scheduler tick: fetch_due_reddit_feeds lane=%s limit=%s", lane, limit)
+    result = asdict(fetch_due_feeds(limit=limit, lane=lane))
+    logger.info("scheduler tick complete: %s", result)
+    return result
 
 
 @shared_task()
@@ -33,6 +39,7 @@ def fetch_subreddit(subreddit: str, *, trigger: str = "scheduled", user_id: int 
         trigger=trigger if trigger in FetchRunTrigger.values else FetchRunTrigger.SCHEDULED,
         user_id=user_id,
     )
+    logger.info("fetch_subreddit start: run_id=%s subreddit=%s trigger=%s user_id=%s", run.id, subreddit, trigger, user_id)
     try:
         matches_created = fetch_normalize_and_match(subreddit, client=build_default_reddit_client())
     except Exception as exc:
@@ -43,11 +50,20 @@ def fetch_subreddit(subreddit: str, *, trigger: str = "scheduled", user_id: int 
         run.error = message[:500]
         run.finished_at = timezone.now()
         run.save(update_fields=["status", "error", "finished_at"])
+        logger.exception(
+            "fetch_subreddit failed: run_id=%s subreddit=%s status=%s error=%s",
+            run.id, subreddit, run.status, message,
+        )
         raise
     run.status = FetchRunStatus.SUCCESS
     run.matches_created = matches_created or 0
     run.finished_at = timezone.now()
     run.save(update_fields=["status", "matches_created", "finished_at"])
+    logger.info(
+        "fetch_subreddit success: run_id=%s subreddit=%s matches_created=%s duration=%.2fs",
+        run.id, subreddit, matches_created,
+        (run.finished_at - run.started_at).total_seconds(),
+    )
     return matches_created
 
 

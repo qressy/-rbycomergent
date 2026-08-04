@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import timedelta
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from .contracts import FetchResult
     from .contracts import RedditFeedSpec
 
+logger = logging.getLogger(__name__)
 ERROR_MESSAGE_LIMIT = 1000
 
 
@@ -77,6 +79,13 @@ def get_due_feed_specs(
         if limit is not None and len(due_specs) >= limit:
             break
 
+    logger.info(
+        "get_due_feed_specs: lane=%s planned=%d due=%d subreddits=%s",
+        lane,
+        len(planned_specs),
+        len(due_specs),
+        [f"r/{s.subreddit}" for s in due_specs] or "(none)",
+    )
     return due_specs
 
 

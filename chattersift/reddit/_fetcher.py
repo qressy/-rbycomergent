@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
@@ -14,6 +15,7 @@ from .contracts import RedditItemPayload
 from .parsers import parse_reddit_atom_response
 from .parsers import parse_reddit_json_response
 
+logger = logging.getLogger(__name__)
 REDDIT_BASE_URL = "https://www.reddit.com"
 # Public Reddit endpoints are requested without OAuth in core mode. Reddit may
 # throttle or block high-volume unauthenticated traffic; User-Agent is required.
@@ -106,19 +108,34 @@ async def _send_request(
     headers: dict[str, str],
 ) -> httpx.Response:
     """Execute one Reddit request and normalize transport/status failures."""
+    full_url = f"{client.base_url}{request_spec.path}?{urlencode(request_spec.params)}"
+    logger.info("reddit HTTP GET %s ua=%r", full_url, headers.get("User-Agent"))
     try:
         response = await client.get(request_spec.path, params=request_spec.params, headers=headers)
     except httpx.TimeoutException as error:
+        logger.warning("reddit HTTP timeout url=%s error=%s", full_url, _format_httpx_error(error))
         msg = f"Reddit request timed out: {_format_httpx_error(error)}"
         raise RedditTimeoutError(msg) from error
     except httpx.TransportError as error:
+        logger.warning("reddit HTTP transport error url=%s error=%s", full_url, _format_httpx_error(error))
         msg = f"Reddit transport error: {_format_httpx_error(error)}"
         raise RedditTransportError(msg) from error
 
+    logger.info(
+        "reddit HTTP response status=%s bytes=%s url=%s",
+        response.status_code,
+        len(response.content),
+        full_url,
+    )
     if response.status_code == HTTP_STATUS_RATE_LIMIT:
+        logger.warning("reddit rate limited (429) url=%s body=%s", full_url, response.text[:300])
         msg = "Reddit rate limit hit (HTTP 429)"
         raise RedditRateLimitError(msg)
     if response.status_code < HTTP_STATUS_OK_MIN or response.status_code >= HTTP_STATUS_REDIRECT_MIN:
+        logger.warning(
+            "reddit HTTP non-2xx status=%s url=%s body=%s",
+            response.status_code, full_url, response.text[:300],
+        )
         msg = f"Reddit request failed with HTTP {response.status_code}"
         raise RedditHttpStatusError(msg)
     return response

@@ -328,12 +328,14 @@ DJANGO_ADMIN_FORCE_ALLAUTH = env.bool("DJANGO_ADMIN_FORCE_ALLAUTH", default=Fals
 # https://docs.djangoproject.com/en/dev/ref/settings/#logging
 # See https://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
+CHATTERSIFT_REDDIT_LOG_LEVEL = env("CHATTERSIFT_REDDIT_LOG_LEVEL", default="INFO")
+
 LOGGING: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s",
+            "format": "%(levelname)s %(asctime)s %(name)s %(process)d %(thread)d %(message)s",
         },
     },
     "handlers": {
@@ -344,6 +346,13 @@ LOGGING: dict[str, Any] = {
         },
     },
     "root": {"level": "INFO", "handlers": ["console"]},
+    "loggers": {
+        "chattersift.reddit": {
+            "level": CHATTERSIFT_REDDIT_LOG_LEVEL,
+            "handlers": ["console"],
+            "propagate": False,
+        },
+    },
 }
 
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
