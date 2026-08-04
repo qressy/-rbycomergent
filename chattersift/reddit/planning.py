@@ -155,13 +155,9 @@ def build_feed_specs_for_monitor_intents(
         preferred_format=feed_format,
         max_terms=max_search_terms,
     ):
-        # Search feeds always use JSON: the RSS <content> for search results
-        # only carries "submitted by X", so post bodies (selftext) are lost and
-        # the keyword matcher can only see titles — yielding zero matches for
-        # posts where the keyword appears only in the body.
         spec = RedditFeedSpec(
             kind=group.kind,
-            format=RedditFeedFormat.JSON,
+            format=feed_format,
             subreddit=group.subreddit,
             query=group.query,
             query_fingerprint=group.query_fingerprint,
