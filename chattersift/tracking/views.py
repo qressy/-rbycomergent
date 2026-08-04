@@ -184,12 +184,15 @@ def runs(request: HttpRequest) -> HttpResponse:
 
     from chattersift.reddit.models import FetchRun
     selected_sub = (request.GET.get("subreddit") or "").strip().casefold()
-    runs_qs = FetchRun.objects.all().select_related("user")
+    runs_qs = FetchRun.objects.filter(user=request.user).select_related("user")
     if selected_sub:
         runs_qs = runs_qs.filter(subreddit=selected_sub)
     runs_list = list(runs_qs[:200])
     subreddit_options = list(
-        FetchRun.objects.values_list("subreddit", flat=True).distinct().order_by("subreddit"),
+        FetchRun.objects.filter(user=request.user)
+        .values_list("subreddit", flat=True)
+        .distinct()
+        .order_by("subreddit"),
     )
     context = {
         "dash_active_nav": "runs",
@@ -725,13 +728,13 @@ def _dashboard_context(
         .values_list("subreddit", "next"),
     )
     last_run_by_subreddit: dict[str, object] = dict(
-        FetchRun.objects.filter(subreddit__in=subreddit_names)
+        FetchRun.objects.filter(subreddit__in=subreddit_names, user=request.user)
         .values("subreddit")
         .annotate(last=Max("started_at"))
         .values_list("subreddit", "last"),
     )
     run_count_by_subreddit: dict[str, int] = dict(
-        FetchRun.objects.filter(subreddit__in=subreddit_names)
+        FetchRun.objects.filter(subreddit__in=subreddit_names, user=request.user)
         .values("subreddit")
         .annotate(n=Count("id"))
         .values_list("subreddit", "n"),
