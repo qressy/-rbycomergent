@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 import httpx
 from django.conf import settings
 
+from . import auth
 from .contracts import RedditFeedFormat
 from .contracts import RedditFeedKind
 from .contracts import RedditFeedSpec
@@ -28,6 +29,13 @@ def _diag(msg: str) -> None:
 
 
 REDDIT_BASE_URL = "https://www.reddit.com"
+REDDIT_OAUTH_BASE_URL = "https://oauth.reddit.com"
+HTTP_STATUS_UNAUTHORIZED = 401
+
+
+def _base_url() -> str:
+    """Return the API base URL, switching to oauth.reddit.com when authed."""
+    return REDDIT_OAUTH_BASE_URL if auth.is_oauth_configured() else REDDIT_BASE_URL
 # Public Reddit endpoints are requested without OAuth in core mode. Reddit may
 # throttle or block high-volume unauthenticated traffic; User-Agent is required.
 DEFAULT_FETCH_LIMIT = 100
@@ -95,12 +103,12 @@ async def fetch_and_parse(
     """Fetch and parse one Reddit feed asynchronously."""
     request_spec = build_request_spec(spec)
     timeout = httpx.Timeout(get_http_timeout_seconds())
-    headers = {"User-Agent": settings.CHATTERSIFT_REDDIT_USER_AGENT}
+    headers = _build_headers()
 
     if client is not None:
         response = await _send_request(client, request_spec, headers=headers)
     else:
-        async with httpx.AsyncClient(base_url=REDDIT_BASE_URL, timeout=timeout) as async_client:
+        async with httpx.AsyncClient(base_url=_base_url(), timeout=timeout) as async_client:
             response = await _send_request(async_client, request_spec, headers=headers)
 
     try:
@@ -110,6 +118,14 @@ async def fetch_and_parse(
     except Exception as error:
         msg = f"Failed to parse Reddit response for {spec.kind} {spec.format}"
         raise RedditParseError(msg) from error
+
+
+def _build_headers() -> dict[str, str]:
+    """Build request headers, including a bearer token when OAuth is configured."""
+    headers = {"User-Agent": settings.CHATTERSIFT_REDDIT_USER_AGENT}
+    if auth.is_oauth_configured():
+        headers["Authorization"] = f"Bearer {auth.get_bearer_token()}"
+    return headers
 
 
 async def _send_request(
@@ -147,6 +163,30 @@ async def _send_request(
         len(response.content),
         full_url,
     )
+    if response.status_code == HTTP_STATUS_UNAUTHORIZED and auth.is_oauth_configured():
+        _diag(f"HTTP 401 with OAuth configured — refreshing token and retrying once url={full_url}")
+        logger.warning("reddit HTTP 401 — refreshing bearer token and retrying")
+        auth.invalidate_cached_token()
+        refreshed_headers = dict(headers)
+        refreshed_headers["Authorization"] = f"Bearer {auth.get_bearer_token(force_refresh=True)}"
+        retry_started = time.monotonic()
+        try:
+            response = await client.get(
+                request_spec.path, params=request_spec.params, headers=refreshed_headers,
+            )
+        except httpx.TimeoutException as error:
+            elapsed = time.monotonic() - retry_started
+            _diag(f"HTTP TIMEOUT after 401 retry {elapsed:.2f}s url={full_url}")
+            msg = f"Reddit request timed out after 401 retry: {_format_httpx_error(error)}"
+            raise RedditTimeoutError(msg) from error
+        except httpx.TransportError as error:
+            elapsed = time.monotonic() - retry_started
+            _diag(f"HTTP TRANSPORT ERROR after 401 retry {elapsed:.2f}s url={full_url}")
+            msg = f"Reddit transport error after 401 retry: {_format_httpx_error(error)}"
+            raise RedditTransportError(msg) from error
+        elapsed = time.monotonic() - retry_started
+        _diag(f"HTTP after-401-retry status={response.status_code} in {elapsed:.2f}s url={full_url}")
+
     if response.status_code == HTTP_STATUS_RATE_LIMIT:
         logger.warning("reddit rate limited (429) url=%s body=%s", full_url, response.text[:300])
         msg = "Reddit rate limit hit (HTTP 429)"

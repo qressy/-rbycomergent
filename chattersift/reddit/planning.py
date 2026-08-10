@@ -5,6 +5,7 @@ import re
 
 from chattersift.tracking.models import Monitor
 
+from . import auth
 from .contracts import MonitorIntent
 from .contracts import MonitorMatchMode
 from .contracts import RedditFeedFormat
@@ -148,6 +149,9 @@ def build_feed_specs_for_monitor_intents(
         Any active monitor mode -> one COMMENT_STREAM/RSS per subreddit.
     """
     feed_format = normalize_feed_format(preferred_format)
+    # oauth.reddit.com only serves JSON — RSS URLs return errors under OAuth.
+    if auth.is_oauth_configured():
+        feed_format = RedditFeedFormat.JSON
     specs_by_identity: dict[tuple[str, str, str, str], RedditFeedSpec] = {}
 
     for group in build_search_query_groups_for_monitor_intents(
@@ -177,7 +181,7 @@ def build_feed_specs_for_monitor_intents(
         if needs_comment_stream:
             spec = RedditFeedSpec(
                 kind=RedditFeedKind.COMMENT_STREAM,
-                format=RedditFeedFormat.RSS,
+                format=feed_format,
                 subreddit=subreddit,
             )
             specs_by_identity[_feed_spec_identity(spec)] = spec
